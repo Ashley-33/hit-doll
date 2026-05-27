@@ -274,6 +274,16 @@
       text-align: center;
       line-height: 1.5;
     }
+    .crop-privacy {
+      font-size: 11px;
+      color: #4caf50;
+      font-weight: 500;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
 
     .crop-slider-wrap {
       width: 100%;
@@ -407,6 +417,7 @@
         <canvas id="crop-canvas" width="280" height="280"></canvas>
       </div>
       <div class="crop-hint">👆 拖动调整位置<br>🤏 双指/滚轮缩放</div>
+      <div class="crop-privacy">🔒 图片仅保存在您设备上，不会上传到任何服务器</div>
       <div class="crop-slider-wrap">
         <span>小</span>
         <input type="range" class="crop-slider" id="crop-scale" min="30" max="300" value="100">
