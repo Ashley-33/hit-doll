@@ -157,21 +157,26 @@
       z-index: 10;
     }
 
-    /* ===== 武器选择栏 ===== */
+    /* ===== 左侧武器选择栏 ===== */
     .weapon-bar {
-      width: 100%;
-      max-width: 420px;
-      overflow-x: auto;
+      position: fixed;
+      left: 8px;
+      top: 60px;
+      bottom: 140px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      z-index: 10;
+      overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
-      padding: 4px 0;
     }
     .weapon-bar::-webkit-scrollbar { display: none; }
 
     .weapon-list {
       display: flex;
-      gap: 10px;
-      padding: 0 4px;
+      flex-direction: column;
+      gap: 6px;
     }
 
     .weapon-item {
@@ -179,29 +184,29 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
-      background: rgba(255,255,255,0.8);
+      justify-content: center;
+      width: 52px;
+      height: 52px;
+      background: rgba(255,255,255,0.85);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border: 2px solid transparent;
-      border-radius: 16px;
-      padding: 8px 14px;
+      border-radius: 14px;
       cursor: pointer;
       transition: all 0.2s;
-      min-width: 64px;
+      gap: 2px;
     }
-    .weapon-item:active { transform: scale(0.93); }
+    .weapon-item:active { transform: scale(0.88); }
     .weapon-item.active {
       border-color: #c2185b;
       background: rgba(255,255,255,0.95);
       box-shadow: 0 2px 12px rgba(194,24,91,0.25);
     }
-    .weapon-item .icon { font-size: 28px; line-height: 1; }
+    .weapon-item .icon { font-size: 24px; line-height: 1; }
     .weapon-item .label {
-      font-size: 11px;
+      font-size: 9px;
       font-weight: 600;
-      color: #555;
-      white-space: nowrap;
+      color: #666;
     }
     .weapon-item.active .label { color: #c2185b; }
 
@@ -550,14 +555,15 @@
     </div>
   </div>
 
+  <!-- 左侧武器选择栏 -->
+  <div class="weapon-bar" id="weapon-bar">
+    <div class="weapon-list" id="weapon-list"></div>
+  </div>
+
   <!-- 底部控制栏 -->
   <div class="bottom-bar">
-    <!-- 武器选择栏 -->
-    <div class="weapon-bar" id="weapon-bar">
-      <div class="weapon-list" id="weapon-list"></div>
-    </div>
     <button class="auto-toggle" id="auto-toggle">🔁 自动暴打: 关</button>
-    <button class="hit-btn" id="hit-btn">👊 打！</button>
+    <button class="hit-btn" id="hit-btn">🎲 打！</button>
   </div>
 
   <!-- ===================== 裁剪弹窗 ===================== -->
@@ -584,15 +590,15 @@
 <script>
     // ============ 武器定义 ============
     const WEAPONS = [
+      { id: 'mixed',   icon: '🎲', label: '混合',   hitTexts: ['混合双打！','乱拳！','狂风暴雨！','🎲'], critTexts: ['终极连击！','满屏乱打！','🌪️💥'] },
       { id: 'fist',    icon: '👊', label: '拳头',   hitTexts: ['啪！','咚！','duang！','嘭！','💥','👊'], critTexts: ['暴击！','重拳！','💢'] },
       { id: 'shoe',    icon: '👟', label: '扔鞋',   hitTexts: ['啪叽！','鞋击！','飞鞋！','💢','👟'], critTexts: ['鞋袭暴击！','致命鞋击！','👞💥'] },
       { id: 'egg',     icon: '🥚', label: '鸡蛋',   hitTexts: ['咔嚓！','蛋碎！','黄了！','🥚','💛'], critTexts: ['蛋碎无敌！','满屏蛋黄！','🥚💥'] },
       { id: 'veggie',  icon: '🥬', label: '蔬菜',   hitTexts: ['啪！','菜袭！','绿色食品！','🥬','🍅'], critTexts: ['蔬菜暴击！','营养到位！','🥦💥'] },
       { id: 'club',    icon: '🪓', label: '狼牙棒', hitTexts: ['轰！','重击！','狼牙！','🪓','💢'], critTexts: ['毁灭打击！','狼牙暴击！','⚔️💥'] },
-      { id: 'mixed',   icon: '🎲', label: '混合',   hitTexts: ['混合双打！','乱拳！','狂风暴雨！','🎲'], critTexts: ['终极连击！','满屏乱打！','🌪️💥'] },
     ];
 
-    let currentWeapon = 'fist';
+    let currentWeapon = 'mixed';
 
     // ============ 初始化武器栏 ============
     const weaponList = document.getElementById('weapon-list');
@@ -807,6 +813,79 @@
       osc.stop(now + 0.2);
     }
 
+    // ============ 惨叫声合成 ============
+    const SCREAM_VARIANTS = [
+      // "啊~" 高音到低音
+      () => { return { start: 900, end: 250, dur: 0.22, wave: 'triangle', vol: 0.35 }; },
+      // "嗷~" 中音
+      () => { return { start: 700, end: 180, dur: 0.18, wave: 'sawtooth', vol: 0.3 }; },
+      // "哎哟~" 有颤音
+      () => { return { start: 600, end: 200, dur: 0.25, wave: 'triangle', vol: 0.4, vibrato: true }; },
+      // "呜~" 低沉
+      () => { return { start: 500, end: 120, dur: 0.2, wave: 'sawtooth', vol: 0.35 }; },
+    ];
+
+    function playScream() {
+      ensureAudio();
+      const ctx = audioCtx;
+      const now = ctx.currentTime;
+      const variant = SCREAM_VARIANTS[Math.floor(Math.random() * SCREAM_VARIANTS.length)]();
+
+      // 主体声音 — 频率下降模拟"啊~"
+      const osc = ctx.createOscillator();
+      osc.type = variant.wave;
+      osc.frequency.setValueAtTime(variant.start, now);
+      osc.frequency.exponentialRampToValueAtTime(variant.end, now + variant.dur);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(variant.vol, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + variant.dur);
+
+      // 人声滤波
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(variant.start * 0.8, now);
+      filter.frequency.exponentialRampToValueAtTime(variant.end * 0.8, now + variant.dur);
+      filter.Q.value = 1.5;
+
+      osc.connect(filter).connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + variant.dur + 0.05);
+
+      // 颤音效果（部分变体）
+      if (variant.vibrato) {
+        const lfo = ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = 12;
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.value = 30;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfo.start(now);
+        lfo.stop(now + variant.dur);
+      }
+
+      // 嘶嘶噪声层
+      const nSize = ctx.sampleRate * variant.dur;
+      const nBuffer = ctx.createBuffer(1, nSize, ctx.sampleRate);
+      const nData = nBuffer.getChannelData(0);
+      for (let i = 0; i < nSize; i++) {
+        nData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nSize, 3) * 0.3;
+      }
+      const nSrc = ctx.createBufferSource();
+      nSrc.buffer = nBuffer;
+      const nGain = ctx.createGain();
+      nGain.gain.setValueAtTime(0.15, now);
+      nGain.gain.exponentialRampToValueAtTime(0.001, now + variant.dur);
+      const nFilter = ctx.createBiquadFilter();
+      nFilter.type = 'highpass';
+      nFilter.frequency.value = 3000;
+      nSrc.connect(nFilter).connect(nGain).connect(ctx.destination);
+      nSrc.start(now);
+      nSrc.stop(now + variant.dur);
+    }
+
     // ============ 状态 ============
     let count = parseInt(localStorage.getItem('hit-count') || '0');
     let autoMode = false;
@@ -996,6 +1075,13 @@
       const texts = isCrit ? weapon.critTexts : weapon.hitTexts;
       spawnFloatingText(texts[Math.floor(Math.random() * texts.length)], isCrit);
       if (isCrit) spawnParticles();
+
+      // 惨叫声 — 暴击必叫，普通打击 35% 概率叫
+      const screamChance = isCrit ? 0.85 : 0.35;
+      if (Math.random() < screamChance) {
+        // 延迟一点点，和打击音效错开
+        setTimeout(() => playScream(), 30);
+      }
 
       comboCount++;
       clearTimeout(comboTimer);
