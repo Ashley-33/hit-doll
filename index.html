@@ -45,7 +45,6 @@
     }
     .counter span { font-size: 22px; font-weight: 800; }
 
-    /* 换脸按钮 — 明确文字 */
     .face-btn {
       background: rgba(255,255,255,0.85);
       backdrop-filter: blur(10px);
@@ -215,26 +214,133 @@
       100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0); }
     }
 
-    /* 换脸提示气泡 */
-    .face-tip {
+    /* ===================== 裁剪弹窗 ===================== */
+    .crop-overlay {
       position: fixed;
-      top: 56px;
-      right: 20px;
-      background: rgba(255,255,255,0.92);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border-radius: 12px;
-      padding: 6px 14px;
-      font-size: 12px;
-      color: #880e4f;
-      font-weight: 500;
-      opacity: 0;
-      transform: translateY(-8px);
-      transition: all 0.3s;
-      z-index: 20;
-      pointer-events: none;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      flex-direction: column;
+      padding: 20px;
     }
-    .face-tip.show { opacity: 1; transform: translateY(0); }
+    .crop-overlay.show { display: flex; }
+
+    .crop-modal {
+      background: #fff;
+      border-radius: 24px;
+      padding: 24px 20px 20px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .crop-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #333;
+      text-align: center;
+    }
+
+    .crop-canvas-wrap {
+      position: relative;
+      width: 280px;
+      height: 280px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #f5f5f5;
+      touch-action: none;
+      cursor: grab;
+    }
+    .crop-canvas-wrap:active { cursor: grabbing; }
+
+    #crop-canvas {
+      width: 280px;
+      height: 280px;
+      display: block;
+    }
+
+    .crop-hint {
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .crop-slider-wrap {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .crop-slider-wrap span {
+      font-size: 14px;
+      color: #666;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .crop-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      border-radius: 3px;
+      background: #e0e0e0;
+      outline: none;
+    }
+    .crop-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e91e63, #c2185b);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(194,24,91,0.3);
+    }
+    .crop-slider::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e91e63, #c2185b);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 8px rgba(194,24,91,0.3);
+    }
+
+    .crop-btns {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+    }
+    .crop-btn {
+      flex: 1;
+      height: 46px;
+      border-radius: 23px;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .crop-btn:active { transform: scale(0.95); }
+    .crop-btn.cancel {
+      background: #f5f5f5;
+      color: #666;
+    }
+    .crop-btn.confirm {
+      background: linear-gradient(135deg, #e91e63, #c2185b);
+      color: white;
+      box-shadow: 0 4px 16px rgba(194,24,91,0.3);
+    }
   </style>
 </head>
 <body>
@@ -244,7 +350,6 @@
     <div class="counter">已打 <span id="count">0</span> 下</div>
     <button class="face-btn" id="face-btn">🎭 换脸</button>
     <input type="file" id="file-input" accept="image/*">
-    <div class="face-tip" id="face-tip">上传照片，替换小人头部</div>
   </div>
 
   <!-- 连击提示 -->
@@ -254,32 +359,18 @@
   <div class="doll-area" id="doll-area">
     <div class="doll-wrapper" id="doll-wrapper">
       <svg class="doll-default" id="doll-svg" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <!-- 头部图片 pattern（默认空，换脸时注入） -->
-          <pattern id="head-pattern" patternUnits="objectBoundingBox" x="0" y="0" width="1" height="1">
-            <image id="head-pattern-img" href="" x="0" y="0" width="1" height="1" preserveAspectRatio="xMidYMid slice"/>
-          </pattern>
-          <!-- 裁剪为圆形 -->
-          <clipPath id="head-clip">
-            <circle cx="100" cy="100" r="45"/>
-          </clipPath>
-        </defs>
+        <!-- 默认头部（更明显，带边框） -->
+        <circle id="head-bg" cx="100" cy="100" r="45" fill="#ffb74d" stroke="#e65100" stroke-width="2"/>
 
-        <!-- 头部底色（换脸时隐藏） -->
-        <circle id="head-bg" cx="100" cy="100" r="45" fill="#ffccbc"/>
-
-        <!-- 头部图片层（换脸时显示） -->
-        <circle id="head-img" cx="100" cy="100" r="45" fill="url(#head-pattern)" opacity="0"/>
-
-        <!-- 眼睛（换脸后隐藏） -->
+        <!-- 眼睛 -->
         <g id="head-features">
-          <circle cx="82" cy="90" r="6" fill="#333" class="feature-eye"/>
-          <circle cx="118" cy="90" r="6" fill="#333" class="feature-eye"/>
+          <circle cx="82" cy="90" r="6" fill="#333"/>
+          <circle cx="118" cy="90" r="6" fill="#333"/>
           <!-- 嘴巴（委屈状） -->
-          <path d="M88 120 Q100 108 112 120" stroke="#333" stroke-width="3" fill="none" stroke-linecap="round" class="feature-mouth"/>
+          <path d="M88 120 Q100 108 112 120" stroke="#333" stroke-width="3" fill="none" stroke-linecap="round"/>
           <!-- 腮红 -->
-          <circle cx="72" cy="105" r="8" fill="#ffab91" opacity="0.6" class="feature-cheek"/>
-          <circle cx="128" cy="105" r="8" fill="#ffab91" opacity="0.6" class="feature-cheek"/>
+          <circle cx="72" cy="105" r="8" fill="#ff7043" opacity="0.5"/>
+          <circle cx="128" cy="105" r="8" fill="#ff7043" opacity="0.5"/>
         </g>
 
         <!-- 身体 -->
@@ -308,8 +399,28 @@
     <button class="hit-btn" id="hit-btn">👊 打！</button>
   </div>
 
+  <!-- ===================== 裁剪弹窗 ===================== -->
+  <div class="crop-overlay" id="crop-overlay">
+    <div class="crop-modal">
+      <div class="crop-title">调整脸部位置</div>
+      <div class="crop-canvas-wrap" id="crop-wrap">
+        <canvas id="crop-canvas" width="280" height="280"></canvas>
+      </div>
+      <div class="crop-hint">👆 拖动调整位置<br>🤏 双指/滚轮缩放</div>
+      <div class="crop-slider-wrap">
+        <span>小</span>
+        <input type="range" class="crop-slider" id="crop-scale" min="30" max="300" value="100">
+        <span>大</span>
+      </div>
+      <div class="crop-btns">
+        <button class="crop-btn cancel" id="crop-cancel">取消</button>
+        <button class="crop-btn confirm" id="crop-confirm">确认换脸</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // ============ 音效系统（Web Audio API，无需外部文件） ============
+    // ============ 音效系统 ============
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
 
@@ -322,8 +433,6 @@
       ensureAudio();
       const ctx = audioCtx;
       const now = ctx.currentTime;
-
-      // 打击音：噪音 + 短促低频
       const bufferSize = ctx.sampleRate * 0.08;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -332,30 +441,24 @@
       }
       const noise = ctx.createBufferSource();
       noise.buffer = buffer;
-
       const noiseGain = ctx.createGain();
       noiseGain.gain.setValueAtTime(0.5, now);
       noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-
       const filter = ctx.createBiquadFilter();
       filter.type = 'bandpass';
       filter.frequency.value = 800 + Math.random() * 600;
       filter.Q.value = 1;
-
       noise.connect(filter).connect(noiseGain).connect(ctx.destination);
       noise.start(now);
       noise.stop(now + 0.1);
 
-      // 低频撞击感
       const osc = ctx.createOscillator();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(150, now);
       osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
-
       const oscGain = ctx.createGain();
       oscGain.gain.setValueAtTime(0.4, now);
       oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-
       osc.connect(oscGain).connect(ctx.destination);
       osc.start(now);
       osc.stop(now + 0.12);
@@ -365,8 +468,6 @@
       ensureAudio();
       const ctx = audioCtx;
       const now = ctx.currentTime;
-
-      // 暴击音：更长的噪音 + 更低的频率
       const bufferSize = ctx.sampleRate * 0.15;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -375,30 +476,24 @@
       }
       const noise = ctx.createBufferSource();
       noise.buffer = buffer;
-
       const noiseGain = ctx.createGain();
       noiseGain.gain.setValueAtTime(0.7, now);
       noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.value = 1200;
       filter.Q.value = 2;
-
       noise.connect(filter).connect(noiseGain).connect(ctx.destination);
       noise.start(now);
       noise.stop(now + 0.2);
 
-      // 低频冲击
       const osc = ctx.createOscillator();
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(100, now);
       osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
-
       const oscGain = ctx.createGain();
       oscGain.gain.setValueAtTime(0.5, now);
       oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-
       osc.connect(oscGain).connect(ctx.destination);
       osc.start(now);
       osc.stop(now + 0.2);
@@ -415,48 +510,61 @@
     const countEl = document.getElementById('count');
     const dollArea = document.getElementById('doll-area');
     const dollWrapper = document.getElementById('doll-wrapper');
-    const dollSvg = document.getElementById('doll-svg');
     const hitBtn = document.getElementById('hit-btn');
     const autoToggle = document.getElementById('auto-toggle');
     const faceBtn = document.getElementById('face-btn');
     const fileInput = document.getElementById('file-input');
     const comboEl = document.getElementById('combo');
     const hitMark = document.getElementById('hit-mark');
-    const faceTip = document.getElementById('face-tip');
 
-    // 换脸相关 SVG 元素
+    // 换脸相关
     const headBg = document.getElementById('head-bg');
-    const headImg = document.getElementById('head-img');
     const headFeatures = document.getElementById('head-features');
-    const headPatternImg = document.getElementById('head-pattern-img');
 
     countEl.textContent = count;
 
-    // ============ 加载已保存的换脸数据 ============
+    // ============ 加载已保存的换脸 ============
     (function loadSavedFace() {
       const saved = localStorage.getItem('hit-doll-face');
-      if (saved) {
-        applyFaceImage(saved);
-      }
+      if (saved) applyFaceImage(saved);
     })();
 
-    /** 将 dataUrl 应用到头部圆形区域 */
     function applyFaceImage(dataUrl) {
-      headPatternImg.setAttribute('href', dataUrl);
-      headImg.setAttribute('opacity', '1');
-      headBg.setAttribute('opacity', '0');
-      headFeatures.setAttribute('opacity', '0');
+      // 将头部底色替换为图片填充
+      headBg.setAttribute('fill', 'url(#face-pattern)');
+      // 创建/更新 pattern
+      let pattern = document.getElementById('face-pattern');
+      if (!pattern) {
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+        pattern.setAttribute('id', 'face-pattern');
+        pattern.setAttribute('patternUnits', 'objectBoundingBox');
+        pattern.setAttribute('x', '0');
+        pattern.setAttribute('y', '0');
+        pattern.setAttribute('width', '1');
+        pattern.setAttribute('height', '1');
+        const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        img.setAttribute('id', 'face-pattern-img');
+        img.setAttribute('x', '0');
+        img.setAttribute('y', '0');
+        img.setAttribute('width', '1');
+        img.setAttribute('height', '1');
+        img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+        pattern.appendChild(img);
+        defs.appendChild(pattern);
+        document.getElementById('doll-svg').insertBefore(defs, document.getElementById('doll-svg').firstChild);
+      }
+      document.getElementById('face-pattern-img').setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dataUrl);
+      // 隐藏默认五官
+      headFeatures.style.display = 'none';
       faceBtn.textContent = '🎭 换脸 ✓';
     }
 
-    /** 恢复默认头部 */
     function resetFace() {
-      headPatternImg.setAttribute('href', '');
-      headImg.setAttribute('opacity', '0');
-      headBg.setAttribute('opacity', '1');
-      headFeatures.setAttribute('opacity', '1');
-      faceBtn.textContent = '🎭 换脸';
+      headBg.setAttribute('fill', '#ffb74d');
+      headFeatures.style.display = 'block';
       localStorage.removeItem('hit-doll-face');
+      faceBtn.textContent = '🎭 换脸';
     }
 
     // ============ 打击逻辑 ============
@@ -468,33 +576,22 @@
       countEl.textContent = count;
       localStorage.setItem('hit-count', count);
 
-      // 音效
       const isCrit = count % 10 === 0;
-      if (isCrit) {
-        playCritSound();
-      } else {
-        playHitSound();
-      }
+      if (isCrit) playCritSound(); else playHitSound();
 
-      // 动画
       dollWrapper.classList.remove('hit', 'hit-hard');
-      void dollWrapper.offsetWidth; // 强制重排
+      void dollWrapper.offsetWidth;
       dollWrapper.classList.add(isCrit ? 'hit-hard' : 'hit');
 
-      // 打击标记（SVG 十字）
       if (hitMark) {
         hitMark.setAttribute('opacity', '1');
         setTimeout(() => hitMark.setAttribute('opacity', '0'), 300);
       }
 
-      // 浮动文字
       const texts = isCrit ? critTexts : hitTexts;
       spawnFloatingText(texts[Math.floor(Math.random() * texts.length)], isCrit);
-
-      // 粒子
       if (isCrit) spawnParticles();
 
-      // 连击
       comboCount++;
       clearTimeout(comboTimer);
       if (comboCount >= 3) {
@@ -539,30 +636,17 @@
     }
 
     // ============ 事件绑定 ============
-    // 点击屏幕打
-    dollArea.addEventListener('click', (e) => {
-      e.preventDefault();
-      doHit();
-    });
+    dollArea.addEventListener('click', (e) => { e.preventDefault(); doHit(); });
+    hitBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); doHit(); });
 
-    // 打按钮
-    hitBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      doHit();
-    });
-
-    // 自动暴打切换
     autoToggle.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       autoMode = !autoMode;
       autoToggle.textContent = autoMode ? '🔁 自动暴打: 开' : '🔁 自动暴打: 关';
       autoToggle.classList.toggle('active', autoMode);
       hitBtn.classList.toggle('auto-on', autoMode);
-
       if (autoMode) {
-        doHit(); // 立即打一下
+        doHit();
         autoInterval = setInterval(doHit, 120);
       } else {
         clearInterval(autoInterval);
@@ -570,59 +654,215 @@
       }
     });
 
-    // 换脸按钮
-    faceBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      fileInput.click();
-    });
-
-    // 长按换脸按钮 → 恢复默认
+    // 长按恢复默认
     let longPressTimer = null;
-    faceBtn.addEventListener('touchstart', (e) => {
-      longPressTimer = setTimeout(() => {
-        resetFace();
-        showFaceTip('已恢复默认脸 😊');
-      }, 600);
+    faceBtn.addEventListener('touchstart', () => {
+      longPressTimer = setTimeout(() => { resetFace(); }, 600);
     });
     faceBtn.addEventListener('touchend', () => clearTimeout(longPressTimer));
     faceBtn.addEventListener('mousedown', () => {
-      longPressTimer = setTimeout(() => {
-        resetFace();
-        showFaceTip('已恢复默认脸 😊');
-      }, 600);
+      longPressTimer = setTimeout(() => { resetFace(); }, 600);
     });
     faceBtn.addEventListener('mouseup', () => clearTimeout(longPressTimer));
     faceBtn.addEventListener('mouseleave', () => clearTimeout(longPressTimer));
 
-    // 文件选择 → 换脸
+    document.querySelector('.bottom-bar').addEventListener('click', (e) => e.stopPropagation());
+
+    // ===================== 裁剪弹窗逻辑 =====================
+    const cropOverlay = document.getElementById('crop-overlay');
+    const cropCanvas = document.getElementById('crop-canvas');
+    const cropCtx = cropCanvas.getContext('2d');
+    const cropWrap = document.getElementById('crop-wrap');
+    const cropScaleInput = document.getElementById('crop-scale');
+    const cropCancel = document.getElementById('crop-cancel');
+    const cropConfirm = document.getElementById('crop-confirm');
+
+    const CANVAS_W = 280;
+    const CANVAS_H = 280;
+    const CIRCLE_R = 80;
+    const CIRCLE_CX = CANVAS_W / 2;
+    const CIRCLE_CY = CANVAS_H / 2;
+
+    let cropImg = null;
+    let cropState = { x: 0, y: 0, scale: 1, dragging: false, lastX: 0, lastY: 0 };
+    let pendingDataUrl = null;
+
+    function drawCrop() {
+      cropCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+      if (!cropImg) return;
+
+      // 画图片
+      const imgW = cropImg.width * cropState.scale;
+      const imgH = cropImg.height * cropState.scale;
+      cropCtx.drawImage(cropImg, CIRCLE_CX - imgW/2 + cropState.x, CIRCLE_CY - imgH/2 + cropState.y, imgW, imgH);
+
+      // 遮罩（挖圆洞）
+      cropCtx.save();
+      cropCtx.fillStyle = 'rgba(0,0,0,0.5)';
+      cropCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      cropCtx.globalCompositeOperation = 'destination-out';
+      cropCtx.beginPath();
+      cropCtx.arc(CIRCLE_CX, CIRCLE_CY, CIRCLE_R, 0, Math.PI * 2);
+      cropCtx.fill();
+      cropCtx.restore();
+
+      // 白色圆边框
+      cropCtx.beginPath();
+      cropCtx.arc(CIRCLE_CX, CIRCLE_CY, CIRCLE_R, 0, Math.PI * 2);
+      cropCtx.strokeStyle = '#fff';
+      cropCtx.lineWidth = 3;
+      cropCtx.stroke();
+
+      // 十字辅助线
+      cropCtx.strokeStyle = 'rgba(255,255,255,0.3)';
+      cropCtx.lineWidth = 1;
+      cropCtx.beginPath(); cropCtx.moveTo(CIRCLE_CX, CIRCLE_CY - CIRCLE_R); cropCtx.lineTo(CIRCLE_CX, CIRCLE_CY + CIRCLE_R); cropCtx.stroke();
+      cropCtx.beginPath(); cropCtx.moveTo(CIRCLE_CX - CIRCLE_R, CIRCLE_CY); cropCtx.lineTo(CIRCLE_CX + CIRCLE_R, CIRCLE_CY); cropCtx.stroke();
+    }
+
+    function openCrop(dataUrl) {
+      cropImg = new Image();
+      cropImg.onload = () => {
+        // 初始适配：让图片短边填满圆形
+        const minDim = Math.min(cropImg.width, cropImg.height);
+        cropState.scale = (CIRCLE_R * 2) / minDim;
+        cropState.x = 0;
+        cropState.y = 0;
+        cropScaleInput.value = Math.round(cropState.scale * 100);
+        pendingDataUrl = dataUrl;
+        cropOverlay.classList.add('show');
+        drawCrop();
+      };
+      cropImg.src = dataUrl;
+    }
+
+    function closeCrop() {
+      cropOverlay.classList.remove('show');
+      cropImg = null;
+      pendingDataUrl = null;
+    }
+
+    function confirmCrop() {
+      if (!cropImg) { closeCrop(); return; }
+      // 生成圆形头像
+      const out = document.createElement('canvas');
+      out.width = CIRCLE_R * 2;
+      out.height = CIRCLE_R * 2;
+      const octx = out.getContext('2d');
+      octx.beginPath();
+      octx.arc(CIRCLE_R, CIRCLE_R, CIRCLE_R, 0, Math.PI * 2);
+      octx.clip();
+
+      const imgW = cropImg.width * cropState.scale;
+      const imgH = cropImg.height * cropState.scale;
+      // 计算图片在 out canvas 上的位置
+      // out 中心对齐 crop canvas 中心
+      const drawX = -(CIRCLE_CX - imgW/2 + cropState.x) + CIRCLE_R;
+      const drawY = -(CIRCLE_CY - imgH/2 + cropState.y) + CIRCLE_R;
+      octx.drawImage(cropImg, drawX, drawY, imgW, imgH);
+
+      const finalUrl = out.toDataURL('image/png');
+      applyFaceImage(finalUrl);
+      localStorage.setItem('hit-doll-face', finalUrl);
+      closeCrop();
+    }
+
+    // 文件选择 → 打开裁剪弹窗
+    faceBtn.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      fileInput.click();
+    });
+
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev) => {
-        const dataUrl = ev.target.result;
-        applyFaceImage(dataUrl);
-        // 仅保存图片数据到 localStorage，不上传服务器
-        localStorage.setItem('hit-doll-face', dataUrl);
-        showFaceTip('换脸成功！长按「换脸」可恢复默认');
-      };
+      reader.onload = (ev) => openCrop(ev.target.result);
       reader.readAsDataURL(file);
-      // 清空 input，允许重复选同一文件
       fileInput.value = '';
     });
 
-    // 提示气泡
-    function showFaceTip(msg) {
-      faceTip.textContent = msg;
-      faceTip.classList.add('show');
-      setTimeout(() => faceTip.classList.remove('show'), 2500);
+    // 拖拽
+    function getPointerPos(e) {
+      const rect = cropCanvas.getBoundingClientRect();
+      if (e.touches && e.touches.length) {
+        return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+      }
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     }
 
-    // 阻止底部栏点击冒泡到 dollArea
-    document.querySelector('.bottom-bar').addEventListener('click', (e) => {
-      e.stopPropagation();
+    cropWrap.addEventListener('mousedown', (e) => {
+      cropState.dragging = true;
+      cropState.lastX = e.clientX;
+      cropState.lastY = e.clientY;
     });
+    cropWrap.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        cropState.dragging = true;
+        cropState.lastX = e.touches[0].clientX;
+        cropState.lastY = e.touches[0].clientY;
+      }
+    }, { passive: false });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!cropState.dragging) return;
+      cropState.x += e.clientX - cropState.lastX;
+      cropState.y += e.clientY - cropState.lastY;
+      cropState.lastX = e.clientX;
+      cropState.lastY = e.clientY;
+      drawCrop();
+    });
+    window.addEventListener('touchmove', (e) => {
+      if (!cropState.dragging || e.touches.length !== 1) return;
+      e.preventDefault();
+      cropState.x += e.touches[0].clientX - cropState.lastX;
+      cropState.y += e.touches[0].clientY - cropState.lastY;
+      cropState.lastX = e.touches[0].clientX;
+      cropState.lastY = e.touches[0].clientY;
+      drawCrop();
+    }, { passive: false });
+
+    function endDrag() { cropState.dragging = false; }
+    window.addEventListener('mouseup', endDrag);
+    window.addEventListener('touchend', endDrag);
+
+    // 缩放
+    cropScaleInput.addEventListener('input', (e) => {
+      cropState.scale = parseInt(e.target.value) / 100;
+      drawCrop();
+    });
+
+    // 滚轮缩放
+    cropWrap.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      cropState.scale = Math.max(0.3, Math.min(3, cropState.scale + delta));
+      cropScaleInput.value = Math.round(cropState.scale * 100);
+      drawCrop();
+    }, { passive: false });
+
+    // 双指缩放
+    let pinchDist = 0;
+    cropWrap.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        pinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      }
+    }, { passive: false });
+    cropWrap.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const newDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        const ratio = newDist / pinchDist;
+        cropState.scale = Math.max(0.3, Math.min(3, cropState.scale * ratio));
+        cropScaleInput.value = Math.round(cropState.scale * 100);
+        pinchDist = newDist;
+        drawCrop();
+      }
+    }, { passive: false });
+
+    // 按钮
+    cropCancel.addEventListener('click', closeCrop);
+    cropConfirm.addEventListener('click', confirmCrop);
   </script>
 </body>
 </html>
