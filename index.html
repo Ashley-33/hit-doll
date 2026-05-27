@@ -72,6 +72,7 @@
       width: 100%;
       cursor: pointer;
       position: relative;
+      overflow: hidden;
     }
 
     .doll-wrapper {
@@ -108,7 +109,23 @@
       height: 280px;
     }
 
-    /* 打击特效 */
+    /* 自定义脸部图片 — 绝对定位覆盖 SVG 头部 */
+    .doll-face-img {
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      object-fit: cover;
+      top: 55px;
+      left: 55px;
+      display: none;
+      border: 2px solid #e65100;
+    }
+    .doll-face-img.show {
+      display: block;
+    }
+
+    /* 打击特效文字 */
     .hit-effect {
       position: fixed;
       pointer-events: none;
@@ -135,10 +152,58 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 16px 20px 32px;
-      gap: 12px;
+      padding: 10px 20px max(20px, env(safe-area-inset-bottom));
+      gap: 10px;
       z-index: 10;
     }
+
+    /* ===== 武器选择栏 ===== */
+    .weapon-bar {
+      width: 100%;
+      max-width: 420px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding: 4px 0;
+    }
+    .weapon-bar::-webkit-scrollbar { display: none; }
+
+    .weapon-list {
+      display: flex;
+      gap: 10px;
+      padding: 0 4px;
+    }
+
+    .weapon-item {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 2px solid transparent;
+      border-radius: 16px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      min-width: 64px;
+    }
+    .weapon-item:active { transform: scale(0.93); }
+    .weapon-item.active {
+      border-color: #c2185b;
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 2px 12px rgba(194,24,91,0.25);
+    }
+    .weapon-item .icon { font-size: 28px; line-height: 1; }
+    .weapon-item .label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #555;
+      white-space: nowrap;
+    }
+    .weapon-item.active .label { color: #c2185b; }
 
     .hit-btn {
       width: 100%;
@@ -212,6 +277,86 @@
     @keyframes particleFly {
       0%   { opacity: 1; transform: translate(0,0) scale(1); }
       100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0); }
+    }
+
+    /* ===== 投掷物动画 ===== */
+    .projectile {
+      position: fixed;
+      pointer-events: none;
+      z-index: 20;
+      font-size: 60px;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+    }
+    @keyframes throwFromLeft {
+      0%   { left: -80px; top: 60%; transform: rotate(-30deg) scale(0.5); opacity: 1; }
+      60%  { left: 50%; top: 35%; transform: rotate(15deg) scale(1.2); opacity: 1; }
+      80%  { left: var(--target-x); top: var(--target-y); transform: rotate(25deg) scale(1); opacity: 1; }
+      100% { left: var(--target-x); top: var(--target-y); transform: rotate(25deg) scale(0.8); opacity: 0; }
+    }
+    @keyframes throwFromRight {
+      0%   { left: calc(100% + 80px); top: 55%; transform: rotate(30deg) scale(0.5); opacity: 1; }
+      60%  { left: 50%; top: 30%; transform: rotate(-15deg) scale(1.2); opacity: 1; }
+      80%  { left: var(--target-x); top: var(--target-y); transform: rotate(-25deg) scale(1); opacity: 1; }
+      100% { left: var(--target-x); top: var(--target-y); transform: rotate(-25deg) scale(0.8); opacity: 0; }
+    }
+
+    /* 鸡蛋碎裂效果 */
+    .egg-splat {
+      position: fixed;
+      pointer-events: none;
+      z-index: 21;
+    }
+    @keyframes eggCrack {
+      0%   { transform: scale(0.5); opacity: 1; }
+      50%  { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+
+    /* 狼牙棒挥舞 */
+    @keyframes clubSwing {
+      0%   { left: -100px; top: 20%; transform: rotate(-60deg) scale(0.6); opacity: 1; }
+      40%  { left: 45%; top: 25%; transform: rotate(30deg) scale(1.3); opacity: 1; }
+      70%  { left: var(--target-x); top: var(--target-y); transform: rotate(45deg) scale(1); opacity: 1; }
+      100% { left: var(--target-x); top: var(--target-y); transform: rotate(45deg) scale(0.7); opacity: 0; }
+    }
+
+    /* 蔬菜投掷 */
+    @keyframes veggieThrow {
+      0%   { left: -60px; top: 50%; transform: rotate(-20deg) scale(0.6) rotate(0deg); opacity: 1; }
+      50%  { left: 50%; top: 30%; transform: rotate(10deg) scale(1.1) rotate(180deg); opacity: 1; }
+      80%  { left: var(--target-x); top: var(--target-y); transform: rotate(20deg) scale(1) rotate(300deg); opacity: 1; }
+      100% { left: var(--target-x); top: var(--target-y); transform: rotate(20deg) scale(0.7) rotate(360deg); opacity: 0; }
+    }
+
+    /* 鸡蛋黄特效 */
+    .yolk-splat {
+      position: fixed;
+      pointer-events: none;
+      z-index: 19;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff176 0%, #fdd835 40%, #f9a825 100%);
+      opacity: 0;
+      animation: yolkSpread 0.8s ease-out forwards;
+    }
+    @keyframes yolkSpread {
+      0%   { width: 0; height: 0; opacity: 1; transform: translate(-50%,-50%); }
+      60%  { opacity: 0.8; }
+      100% { width: 120px; height: 100px; opacity: 0; transform: translate(-50%,-50%); }
+    }
+
+    .egg-white {
+      position: fixed;
+      pointer-events: none;
+      z-index: 18;
+      background: rgba(255,255,255,0.85);
+      border-radius: 50% 30% 60% 40%;
+      opacity: 0;
+      animation: whiteSpread 1s ease-out forwards;
+    }
+    @keyframes whiteSpread {
+      0%   { width: 0; height: 0; opacity: 1; transform: translate(-50%,-50%) rotate(0deg); }
+      50%  { opacity: 0.7; }
+      100% { width: 90px; height: 70px; opacity: 0; transform: translate(-50%,-50%) rotate(45deg); }
     }
 
     /* ===================== 裁剪弹窗 ===================== */
@@ -368,6 +513,8 @@
   <!-- 小人区域 -->
   <div class="doll-area" id="doll-area">
     <div class="doll-wrapper" id="doll-wrapper">
+      <!-- 自定义脸部图片 — 覆盖 SVG 头部圆形区域 -->
+      <img class="doll-face-img" id="face-img" alt="自定义脸">
       <svg class="doll-default" id="doll-svg" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
         <!-- 默认头部（更明显，带边框） -->
         <circle id="head-bg" cx="100" cy="100" r="45" fill="#ffb74d" stroke="#e65100" stroke-width="2"/>
@@ -405,6 +552,10 @@
 
   <!-- 底部控制栏 -->
   <div class="bottom-bar">
+    <!-- 武器选择栏 -->
+    <div class="weapon-bar" id="weapon-bar">
+      <div class="weapon-list" id="weapon-list"></div>
+    </div>
     <button class="auto-toggle" id="auto-toggle">🔁 自动暴打: 关</button>
     <button class="hit-btn" id="hit-btn">👊 打！</button>
   </div>
@@ -430,7 +581,37 @@
     </div>
   </div>
 
-  <script>
+<script>
+    // ============ 武器定义 ============
+    const WEAPONS = [
+      { id: 'fist',    icon: '👊', label: '拳头',   hitTexts: ['啪！','咚！','duang！','嘭！','💥','👊'], critTexts: ['暴击！','重拳！','💢'] },
+      { id: 'shoe',    icon: '👟', label: '扔鞋',   hitTexts: ['啪叽！','鞋击！','飞鞋！','💢','👟'], critTexts: ['鞋袭暴击！','致命鞋击！','👞💥'] },
+      { id: 'egg',     icon: '🥚', label: '鸡蛋',   hitTexts: ['咔嚓！','蛋碎！','黄了！','🥚','💛'], critTexts: ['蛋碎无敌！','满屏蛋黄！','🥚💥'] },
+      { id: 'veggie',  icon: '🥬', label: '蔬菜',   hitTexts: ['啪！','菜袭！','绿色食品！','🥬','🍅'], critTexts: ['蔬菜暴击！','营养到位！','🥦💥'] },
+      { id: 'club',    icon: '🪓', label: '狼牙棒', hitTexts: ['轰！','重击！','狼牙！','🪓','💢'], critTexts: ['毁灭打击！','狼牙暴击！','⚔️💥'] },
+      { id: 'mixed',   icon: '🎲', label: '混合',   hitTexts: ['混合双打！','乱拳！','狂风暴雨！','🎲'], critTexts: ['终极连击！','满屏乱打！','🌪️💥'] },
+    ];
+
+    let currentWeapon = 'fist';
+
+    // ============ 初始化武器栏 ============
+    const weaponList = document.getElementById('weapon-list');
+    WEAPONS.forEach(w => {
+      const item = document.createElement('div');
+      item.className = 'weapon-item' + (w.id === currentWeapon ? ' active' : '');
+      item.dataset.id = w.id;
+      item.innerHTML = `<span class="icon">${w.icon}</span><span class="label">${w.label}</span>`;
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentWeapon = w.id;
+        document.querySelectorAll('.weapon-item').forEach(el => el.classList.remove('active'));
+        item.classList.add('active');
+        // 更新打击按钮文字
+        document.getElementById('hit-btn').textContent = `${w.icon} 打！`;
+      });
+      weaponList.appendChild(item);
+    });
+
     // ============ 音效系统 ============
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
@@ -440,10 +621,124 @@
       if (audioCtx.state === 'suspended') audioCtx.resume();
     }
 
-    function playHitSound() {
+    function playHitSound(weaponId) {
       ensureAudio();
       const ctx = audioCtx;
       const now = ctx.currentTime;
+
+      if (weaponId === 'egg') {
+        // 鸡蛋碎裂音效 — 短促的高频碎裂声
+        const bufferSize = ctx.sampleRate * 0.06;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 4);
+        }
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.6, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 2000;
+        src.connect(filter).connect(gain).connect(ctx.destination);
+        src.start(now);
+        src.stop(now + 0.1);
+        // 低频蛋黄感
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+        const g2 = ctx.createGain();
+        g2.gain.setValueAtTime(0.3, now);
+        g2.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(g2).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.15);
+        return;
+      }
+
+      if (weaponId === 'shoe') {
+        // 鞋子 — 软质打击声
+        const bufferSize = ctx.sampleRate * 0.1;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+        }
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 600;
+        filter.Q.value = 0.8;
+        src.connect(filter).connect(gain).connect(ctx.destination);
+        src.start(now);
+        src.stop(now + 0.15);
+        return;
+      }
+
+      if (weaponId === 'club') {
+        // 狼牙棒 — 沉重低频打击
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.6, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 800;
+        osc.connect(filter).connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+        // 重击噪声
+        const bufferSize = ctx.sampleRate * 0.12;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 5);
+        }
+        const nsrc = ctx.createBufferSource();
+        nsrc.buffer = buffer;
+        const ngain = ctx.createGain();
+        ngain.gain.setValueAtTime(0.5, now);
+        ngain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        nsrc.connect(ngain).connect(ctx.destination);
+        nsrc.start(now);
+        nsrc.stop(now + 0.18);
+        return;
+      }
+
+      if (weaponId === 'veggie') {
+        // 蔬菜 — 多汁打击声
+        const bufferSize = ctx.sampleRate * 0.08;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 3) * (0.5 + Math.sin(i * 0.1) * 0.5);
+        }
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1500;
+        filter.Q.value = 1.2;
+        src.connect(filter).connect(gain).connect(ctx.destination);
+        src.start(now);
+        src.stop(now + 0.12);
+        return;
+      }
+
+      // 默认拳头音效
       const bufferSize = ctx.sampleRate * 0.08;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -475,10 +770,12 @@
       osc.stop(now + 0.12);
     }
 
-    function playCritSound() {
+    function playCritSound(weaponId) {
       ensureAudio();
       const ctx = audioCtx;
       const now = ctx.currentTime;
+
+      // 暴击通用：更大的噪声 + 低频震荡
       const bufferSize = ctx.sampleRate * 0.15;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -531,6 +828,7 @@
     // 换脸相关
     const headBg = document.getElementById('head-bg');
     const headFeatures = document.getElementById('head-features');
+    const faceImg = document.getElementById('face-img');
 
     countEl.textContent = count;
 
@@ -541,55 +839,151 @@
     })();
 
     function applyFaceImage(dataUrl) {
-      // 将头部底色替换为图片填充
-      headBg.setAttribute('fill', 'url(#face-pattern)');
-      // 创建/更新 pattern
-      let pattern = document.getElementById('face-pattern');
-      if (!pattern) {
-        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-        pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
-        pattern.setAttribute('id', 'face-pattern');
-        pattern.setAttribute('patternUnits', 'objectBoundingBox');
-        pattern.setAttribute('x', '0');
-        pattern.setAttribute('y', '0');
-        pattern.setAttribute('width', '1');
-        pattern.setAttribute('height', '1');
-        const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-        img.setAttribute('id', 'face-pattern-img');
-        img.setAttribute('x', '0');
-        img.setAttribute('y', '0');
-        img.setAttribute('width', '1');
-        img.setAttribute('height', '1');
-        img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-        pattern.appendChild(img);
-        defs.appendChild(pattern);
-        document.getElementById('doll-svg').insertBefore(defs, document.getElementById('doll-svg').firstChild);
-      }
-      document.getElementById('face-pattern-img').setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dataUrl);
-      // 隐藏默认五官
+      headBg.setAttribute('opacity', '0');
       headFeatures.style.display = 'none';
+      faceImg.src = dataUrl;
+      faceImg.classList.add('show');
       faceBtn.textContent = '🎭 换脸 ✓';
     }
 
     function resetFace() {
-      headBg.setAttribute('fill', '#ffb74d');
+      headBg.setAttribute('opacity', '1');
       headFeatures.style.display = 'block';
+      faceImg.classList.remove('show');
+      faceImg.src = '';
       localStorage.removeItem('hit-doll-face');
       faceBtn.textContent = '🎭 换脸';
     }
 
-    // ============ 打击逻辑 ============
-    const hitTexts = ['啪！', '咚！', 'duang！', '嘭！', '💥', '⚡', '👊', '😤'];
-    const critTexts = ['暴击！', '连击！', '火星四溅！', '💢', '🔥', '💫'];
+    // ============ 获取实际武器（混合模式随机） ============
+    function getActiveWeapon() {
+      if (currentWeapon === 'mixed') {
+        const realWeapons = WEAPONS.filter(w => w.id !== 'mixed');
+        return realWeapons[Math.floor(Math.random() * realWeapons.length)];
+      }
+      return WEAPONS.find(w => w.id === currentWeapon) || WEAPONS[0];
+    }
 
+    // ============ 投掷动画系统 ============
+    function animateProjectile(weaponId, onImpact) {
+      const dollRect = dollWrapper.getBoundingClientRect();
+      const targetX = dollRect.left + dollRect.width / 2;
+      const targetY = dollRect.top + dollRect.height / 3;
+
+      const proj = document.createElement('div');
+      proj.className = 'projectile';
+
+      let animName, icon;
+      const fromLeft = Math.random() > 0.5;
+
+      switch(weaponId) {
+        case 'shoe':
+          icon = '👟';
+          animName = fromLeft ? 'throwFromLeft' : 'throwFromRight';
+          break;
+        case 'veggie':
+          icon = ['🥬','🍅','🥦','🌽'][Math.floor(Math.random()*4)];
+          animName = 'veggieThrow';
+          break;
+        case 'club':
+          icon = '🪓';
+          animName = 'clubSwing';
+          break;
+        case 'egg':
+          icon = '🥚';
+          animName = fromLeft ? 'throwFromLeft' : 'throwFromRight';
+          break;
+        default:
+          onImpact && onImpact();
+          return;
+      }
+
+      proj.textContent = icon;
+      proj.style.setProperty('--target-x', targetX + 'px');
+      proj.style.setProperty('--target-y', targetY + 'px');
+      proj.style.animation = `${animName} 0.4s ease-in forwards`;
+
+      document.body.appendChild(proj);
+
+      // 命中时刻（动画 70% 处触发）
+      setTimeout(() => {
+        onImpact && onImpact();
+        // 鸡蛋特殊效果
+        if (weaponId === 'egg') showEggSplat(targetX, targetY);
+      }, 280);
+
+      setTimeout(() => proj.remove(), 500);
+    }
+
+    // ============ 鸡蛋碎裂特效 ============
+    function showEggSplat(x, y) {
+      // 蛋黄
+      const yolk = document.createElement('div');
+      yolk.className = 'yolk-splat';
+      yolk.style.left = x + 'px';
+      yolk.style.top = y + 'px';
+      document.body.appendChild(yolk);
+      setTimeout(() => yolk.remove(), 900);
+
+      // 蛋白（多个）
+      for (let i = 0; i < 3; i++) {
+        const white = document.createElement('div');
+        white.className = 'egg-white';
+        const angle = (Math.PI * 2 / 3) * i;
+        white.style.left = (x + Math.cos(angle) * 30) + 'px';
+        white.style.top = (y + Math.sin(angle) * 30) + 'px';
+        const size = 30 + Math.random() * 30;
+        white.style.width = size + 'px';
+        white.style.height = (size * 0.7) + 'px';
+        white.style.animationDelay = (i * 0.08) + 's';
+        document.body.appendChild(white);
+        setTimeout(() => white.remove(), 1100);
+      }
+
+      // 蛋壳碎片粒子
+      const shellColors = ['#fff8e1','#ffe082','#ffca28'];
+      for (let i = 0; i < 6; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.background = shellColors[Math.floor(Math.random() * shellColors.length)];
+        p.style.width = (4 + Math.random() * 6) + 'px';
+        p.style.height = p.style.width;
+        p.style.left = x + 'px';
+        p.style.top = y + 'px';
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 40 + Math.random() * 60;
+        p.style.setProperty('--px', Math.cos(angle) * dist + 'px');
+        p.style.setProperty('--py', Math.sin(angle) * dist - 20 + 'px');
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 700);
+      }
+    }
+
+    // ============ 打击逻辑 ============
     function doHit() {
       count++;
       countEl.textContent = count;
       localStorage.setItem('hit-count', count);
 
       const isCrit = count % 10 === 0;
-      if (isCrit) playCritSound(); else playHitSound();
+      const weapon = getActiveWeapon();
 
+      if (isCrit) playCritSound(weapon.id); else playHitSound(weapon.id);
+
+      // 投掷类武器：先播动画，动画中途触发打击
+      const projectileWeapons = ['shoe', 'egg', 'veggie', 'club'];
+      const needAnimation = projectileWeapons.includes(weapon.id);
+
+      if (needAnimation) {
+        animateProjectile(weapon.id, () => {
+          applyHitEffect(weapon, isCrit);
+        });
+      } else {
+        applyHitEffect(weapon, isCrit);
+      }
+    }
+
+    function applyHitEffect(weapon, isCrit) {
       dollWrapper.classList.remove('hit', 'hit-hard');
       void dollWrapper.offsetWidth;
       dollWrapper.classList.add(isCrit ? 'hit-hard' : 'hit');
@@ -599,7 +993,7 @@
         setTimeout(() => hitMark.setAttribute('opacity', '0'), 300);
       }
 
-      const texts = isCrit ? critTexts : hitTexts;
+      const texts = isCrit ? weapon.critTexts : weapon.hitTexts;
       spawnFloatingText(texts[Math.floor(Math.random() * texts.length)], isCrit);
       if (isCrit) spawnParticles();
 
@@ -665,7 +1059,7 @@
       }
     });
 
-    // 长按恢复默认
+    // 长按恢复默认脸
     let longPressTimer = null;
     faceBtn.addEventListener('touchstart', () => {
       longPressTimer = setTimeout(() => { resetFace(); }, 600);
@@ -702,7 +1096,6 @@
       cropCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
       if (!cropImg) return;
 
-      // 画图片
       const imgW = cropImg.width * cropState.scale;
       const imgH = cropImg.height * cropState.scale;
       cropCtx.drawImage(cropImg, CIRCLE_CX - imgW/2 + cropState.x, CIRCLE_CY - imgH/2 + cropState.y, imgW, imgH);
@@ -734,7 +1127,6 @@
     function openCrop(dataUrl) {
       cropImg = new Image();
       cropImg.onload = () => {
-        // 初始适配：让图片短边填满圆形
         const minDim = Math.min(cropImg.width, cropImg.height);
         cropState.scale = (CIRCLE_R * 2) / minDim;
         cropState.x = 0;
@@ -755,22 +1147,28 @@
 
     function confirmCrop() {
       if (!cropImg) { closeCrop(); return; }
-      // 生成圆形头像
+
+      const temp = document.createElement('canvas');
+      temp.width = CANVAS_W;
+      temp.height = CANVAS_H;
+      const tctx = temp.getContext('2d');
+      tctx.beginPath();
+      tctx.arc(CIRCLE_CX, CIRCLE_CY, CIRCLE_R, 0, Math.PI * 2);
+      tctx.clip();
+
+      const imgW = cropImg.width * cropState.scale;
+      const imgH = cropImg.height * cropState.scale;
+      tctx.drawImage(cropImg, CIRCLE_CX - imgW/2 + cropState.x, CIRCLE_CY - imgH/2 + cropState.y, imgW, imgH);
+
       const out = document.createElement('canvas');
       out.width = CIRCLE_R * 2;
       out.height = CIRCLE_R * 2;
       const octx = out.getContext('2d');
-      octx.beginPath();
-      octx.arc(CIRCLE_R, CIRCLE_R, CIRCLE_R, 0, Math.PI * 2);
-      octx.clip();
-
-      const imgW = cropImg.width * cropState.scale;
-      const imgH = cropImg.height * cropState.scale;
-      // 计算图片在 out canvas 上的位置
-      // out 中心对齐 crop canvas 中心
-      const drawX = -(CIRCLE_CX - imgW/2 + cropState.x) + CIRCLE_R;
-      const drawY = -(CIRCLE_CY - imgH/2 + cropState.y) + CIRCLE_R;
-      octx.drawImage(cropImg, drawX, drawY, imgW, imgH);
+      octx.drawImage(
+        temp,
+        CIRCLE_CX - CIRCLE_R, CIRCLE_CY - CIRCLE_R, CIRCLE_R * 2, CIRCLE_R * 2,
+        0, 0, CIRCLE_R * 2, CIRCLE_R * 2
+      );
 
       const finalUrl = out.toDataURL('image/png');
       applyFaceImage(finalUrl);
@@ -794,14 +1192,6 @@
     });
 
     // 拖拽
-    function getPointerPos(e) {
-      const rect = cropCanvas.getBoundingClientRect();
-      if (e.touches && e.touches.length) {
-        return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-      }
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    }
-
     cropWrap.addEventListener('mousedown', (e) => {
       cropState.dragging = true;
       cropState.lastX = e.clientX;
