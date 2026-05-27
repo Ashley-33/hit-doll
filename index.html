@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>打小人 - 情绪释放</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin:0; padding:0; box-sizing: border-box; }
 
     body {
       height: 100dvh;
@@ -35,6 +35,7 @@
     .counter {
       background: rgba(255,255,255,0.85);
       backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border-radius: 20px;
       padding: 8px 20px;
       font-size: 15px;
@@ -44,21 +45,23 @@
     }
     .counter span { font-size: 22px; font-weight: 800; }
 
-    .upload-btn {
-      width: 40px; height: 40px;
-      border-radius: 50%;
-      border: none;
+    /* 换脸按钮 — 明确文字 */
+    .face-btn {
       background: rgba(255,255,255,0.85);
       backdrop-filter: blur(10px);
-      font-size: 20px;
+      -webkit-backdrop-filter: blur(10px);
+      border: none;
+      border-radius: 20px;
+      padding: 8px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #c2185b;
       cursor: pointer;
       box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.15s;
+      transition: transform 0.15s, background 0.15s;
+      white-space: nowrap;
     }
-    .upload-btn:active { transform: scale(0.9); }
+    .face-btn:active { transform: scale(0.93); background: rgba(255,255,255,0.95); }
     #file-input { display: none; }
 
     /* 小人区域 */
@@ -101,25 +104,14 @@
       100% { transform: scale(1) rotate(0); }
     }
 
-    /* 默认小人 SVG */
     .doll-default {
-      width: 180px;
-      height: 260px;
-    }
-
-    /* 自定义图片 */
-    .doll-img {
       width: 200px;
-      height: 200px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 5px solid rgba(255,255,255,0.7);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      height: 280px;
     }
 
     /* 打击特效 */
     .hit-effect {
-      position: absolute;
+      position: fixed;
       pointer-events: none;
       font-size: 40px;
       font-weight: 900;
@@ -173,6 +165,7 @@
     .auto-toggle {
       background: rgba(255,255,255,0.8);
       backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border: none;
       border-radius: 20px;
       padding: 8px 24px;
@@ -197,6 +190,7 @@
       transform: translateX(-50%);
       background: rgba(255,255,255,0.9);
       backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border-radius: 16px;
       padding: 6px 18px;
       font-size: 14px;
@@ -210,7 +204,7 @@
 
     /* 碎屑粒子 */
     .particle {
-      position: absolute;
+      position: fixed;
       width: 8px; height: 8px;
       border-radius: 50%;
       pointer-events: none;
@@ -220,6 +214,27 @@
       0%   { opacity: 1; transform: translate(0,0) scale(1); }
       100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0); }
     }
+
+    /* 换脸提示气泡 */
+    .face-tip {
+      position: fixed;
+      top: 56px;
+      right: 20px;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: #880e4f;
+      font-weight: 500;
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: all 0.3s;
+      z-index: 20;
+      pointer-events: none;
+    }
+    .face-tip.show { opacity: 1; transform: translateY(0); }
   </style>
 </head>
 <body>
@@ -227,8 +242,9 @@
   <!-- 顶部栏 -->
   <div class="top-bar">
     <div class="counter">已打 <span id="count">0</span> 下</div>
-    <button class="upload-btn" id="upload-btn" title="更换脸图">👤</button>
+    <button class="face-btn" id="face-btn">🎭 换脸</button>
     <input type="file" id="file-input" accept="image/*">
+    <div class="face-tip" id="face-tip">上传照片，替换小人头部</div>
   </div>
 
   <!-- 连击提示 -->
@@ -237,18 +253,35 @@
   <!-- 小人区域 -->
   <div class="doll-area" id="doll-area">
     <div class="doll-wrapper" id="doll-wrapper">
-      <!-- 默认 SVG 小人 -->
       <svg class="doll-default" id="doll-svg" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
-        <!-- 身体 -->
-        <circle cx="100" cy="100" r="45" fill="#ffccbc"/>
-        <!-- 眼睛 -->
-        <circle cx="82" cy="90" r="6" fill="#333"/>
-        <circle cx="118" cy="90" r="6" fill="#333"/>
-        <!-- 嘴巴（委屈状） -->
-        <path d="M88 120 Q100 108 112 120" stroke="#333" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <!-- 腮红 -->
-        <circle cx="72" cy="105" r="8" fill="#ffab91" opacity="0.6"/>
-        <circle cx="128" cy="105" r="8" fill="#ffab91" opacity="0.6"/>
+        <defs>
+          <!-- 头部图片 pattern（默认空，换脸时注入） -->
+          <pattern id="head-pattern" patternUnits="objectBoundingBox" x="0" y="0" width="1" height="1">
+            <image id="head-pattern-img" href="" x="0" y="0" width="1" height="1" preserveAspectRatio="xMidYMid slice"/>
+          </pattern>
+          <!-- 裁剪为圆形 -->
+          <clipPath id="head-clip">
+            <circle cx="100" cy="100" r="45"/>
+          </clipPath>
+        </defs>
+
+        <!-- 头部底色（换脸时隐藏） -->
+        <circle id="head-bg" cx="100" cy="100" r="45" fill="#ffccbc"/>
+
+        <!-- 头部图片层（换脸时显示） -->
+        <circle id="head-img" cx="100" cy="100" r="45" fill="url(#head-pattern)" opacity="0"/>
+
+        <!-- 眼睛（换脸后隐藏） -->
+        <g id="head-features">
+          <circle cx="82" cy="90" r="6" fill="#333" class="feature-eye"/>
+          <circle cx="118" cy="90" r="6" fill="#333" class="feature-eye"/>
+          <!-- 嘴巴（委屈状） -->
+          <path d="M88 120 Q100 108 112 120" stroke="#333" stroke-width="3" fill="none" stroke-linecap="round" class="feature-mouth"/>
+          <!-- 腮红 -->
+          <circle cx="72" cy="105" r="8" fill="#ffab91" opacity="0.6" class="feature-cheek"/>
+          <circle cx="128" cy="105" r="8" fill="#ffab91" opacity="0.6" class="feature-cheek"/>
+        </g>
+
         <!-- 身体 -->
         <rect x="70" y="140" width="60" height="70" rx="20" fill="#ef9a9a"/>
         <!-- 手 -->
@@ -257,6 +290,7 @@
         <!-- 脚 -->
         <rect x="75" y="205" width="20" height="40" rx="10" fill="#ef9a9a"/>
         <rect x="105" y="205" width="20" height="40" rx="10" fill="#ef9a9a"/>
+
         <!-- 被打的特效十字 -->
         <g id="hit-mark" opacity="0">
           <line x1="70" y1="75" x2="90" y2="95" stroke="#d32f2f" stroke-width="4" stroke-linecap="round"/>
@@ -265,8 +299,6 @@
           <line x1="130" y1="75" x2="110" y2="95" stroke="#d32f2f" stroke-width="4" stroke-linecap="round"/>
         </g>
       </svg>
-      <!-- 自定义图片（默认隐藏） -->
-      <img class="doll-img" id="doll-img" style="display:none" alt="自定义小人">
     </div>
   </div>
 
@@ -292,7 +324,6 @@
       const now = ctx.currentTime;
 
       // 打击音：噪音 + 短促低频
-      // 1. 噪音突发
       const bufferSize = ctx.sampleRate * 0.08;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -315,7 +346,7 @@
       noise.start(now);
       noise.stop(now + 0.1);
 
-      // 2. 低频撞击感
+      // 低频撞击感
       const osc = ctx.createOscillator();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(150, now);
@@ -379,28 +410,53 @@
     let autoInterval = null;
     let comboCount = 0;
     let comboTimer = null;
-    let lastCustomImg = localStorage.getItem('hit-doll-img');
 
     // DOM
     const countEl = document.getElementById('count');
     const dollArea = document.getElementById('doll-area');
     const dollWrapper = document.getElementById('doll-wrapper');
     const dollSvg = document.getElementById('doll-svg');
-    const dollImg = document.getElementById('doll-img');
     const hitBtn = document.getElementById('hit-btn');
     const autoToggle = document.getElementById('auto-toggle');
-    const uploadBtn = document.getElementById('upload-btn');
+    const faceBtn = document.getElementById('face-btn');
     const fileInput = document.getElementById('file-input');
     const comboEl = document.getElementById('combo');
     const hitMark = document.getElementById('hit-mark');
+    const faceTip = document.getElementById('face-tip');
+
+    // 换脸相关 SVG 元素
+    const headBg = document.getElementById('head-bg');
+    const headImg = document.getElementById('head-img');
+    const headFeatures = document.getElementById('head-features');
+    const headPatternImg = document.getElementById('head-pattern-img');
 
     countEl.textContent = count;
 
-    // ============ 加载自定义图片 ============
-    if (lastCustomImg) {
-      dollSvg.style.display = 'none';
-      dollImg.style.display = 'block';
-      dollImg.src = lastCustomImg;
+    // ============ 加载已保存的换脸数据 ============
+    (function loadSavedFace() {
+      const saved = localStorage.getItem('hit-doll-face');
+      if (saved) {
+        applyFaceImage(saved);
+      }
+    })();
+
+    /** 将 dataUrl 应用到头部圆形区域 */
+    function applyFaceImage(dataUrl) {
+      headPatternImg.setAttribute('href', dataUrl);
+      headImg.setAttribute('opacity', '1');
+      headBg.setAttribute('opacity', '0');
+      headFeatures.setAttribute('opacity', '0');
+      faceBtn.textContent = '🎭 换脸 ✓';
+    }
+
+    /** 恢复默认头部 */
+    function resetFace() {
+      headPatternImg.setAttribute('href', '');
+      headImg.setAttribute('opacity', '0');
+      headBg.setAttribute('opacity', '1');
+      headFeatures.setAttribute('opacity', '1');
+      faceBtn.textContent = '🎭 换脸';
+      localStorage.removeItem('hit-doll-face');
     }
 
     // ============ 打击逻辑 ============
@@ -458,7 +514,6 @@
       const rect = dollWrapper.getBoundingClientRect();
       el.style.left = (rect.left + rect.width / 2 - 30 + (Math.random() - 0.5) * 80) + 'px';
       el.style.top = (rect.top + 20 + Math.random() * 40) + 'px';
-      el.style.position = 'fixed';
       document.body.appendChild(el);
       setTimeout(() => el.remove(), 750);
     }
@@ -474,7 +529,6 @@
         p.style.background = colors[Math.floor(Math.random() * colors.length)];
         p.style.left = cx + 'px';
         p.style.top = cy + 'px';
-        p.style.position = 'fixed';
         const angle = Math.random() * Math.PI * 2;
         const dist = 60 + Math.random() * 80;
         p.style.setProperty('--px', Math.cos(angle) * dist + 'px');
@@ -516,36 +570,54 @@
       }
     });
 
-    // 上传图片
-    uploadBtn.addEventListener('click', (e) => {
+    // 换脸按钮
+    faceBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       fileInput.click();
     });
 
+    // 长按换脸按钮 → 恢复默认
+    let longPressTimer = null;
+    faceBtn.addEventListener('touchstart', (e) => {
+      longPressTimer = setTimeout(() => {
+        resetFace();
+        showFaceTip('已恢复默认脸 😊');
+      }, 600);
+    });
+    faceBtn.addEventListener('touchend', () => clearTimeout(longPressTimer));
+    faceBtn.addEventListener('mousedown', () => {
+      longPressTimer = setTimeout(() => {
+        resetFace();
+        showFaceTip('已恢复默认脸 😊');
+      }, 600);
+    });
+    faceBtn.addEventListener('mouseup', () => clearTimeout(longPressTimer));
+    faceBtn.addEventListener('mouseleave', () => clearTimeout(longPressTimer));
+
+    // 文件选择 → 换脸
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = (ev) => {
         const dataUrl = ev.target.result;
-        dollSvg.style.display = 'none';
-        dollImg.style.display = 'block';
-        dollImg.src = dataUrl;
-        // 保存到 localStorage（仅限图片数据，不上传服务器）
-        localStorage.setItem('hit-doll-img', dataUrl);
+        applyFaceImage(dataUrl);
+        // 仅保存图片数据到 localStorage，不上传服务器
+        localStorage.setItem('hit-doll-face', dataUrl);
+        showFaceTip('换脸成功！长按「换脸」可恢复默认');
       };
       reader.readAsDataURL(file);
+      // 清空 input，允许重复选同一文件
+      fileInput.value = '';
     });
 
-    // 重置图片
-    dollImg.addEventListener('dblclick', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      localStorage.removeItem('hit-doll-img');
-      dollSvg.style.display = 'block';
-      dollImg.style.display = 'none';
-    });
+    // 提示气泡
+    function showFaceTip(msg) {
+      faceTip.textContent = msg;
+      faceTip.classList.add('show');
+      setTimeout(() => faceTip.classList.remove('show'), 2500);
+    }
 
     // 阻止底部栏点击冒泡到 dollArea
     document.querySelector('.bottom-bar').addEventListener('click', (e) => {
