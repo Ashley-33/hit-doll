@@ -105,24 +105,55 @@
     }
 
     .doll-default {
-      width: 200px;
+      width: 280px;
       height: 280px;
+      object-fit: contain;
     }
 
-    /* 自定义脸部图片 — 绝对定位覆盖 SVG 头部 */
+    /* 自定义脸部图片 — 绝对定位覆盖头部 */
     .doll-face-img {
       position: absolute;
-      width: 90px;
-      height: 90px;
+      width: 126px;
+      height: 126px;
       border-radius: 50%;
       object-fit: cover;
-      top: 55px;
-      left: 55px;
+      top: 41px;
+      left: 58px;
       display: none;
       border: 2px solid #e65100;
+      z-index: 2;
     }
     .doll-face-img.show {
       display: block;
+    }
+
+    /* 打击十字标记 */
+    .hit-mark-cross {
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 5;
+      transition: opacity 0.1s;
+    }
+    .hit-mark-cross.show { opacity: 1; }
+    .hit-mark-cross::before, .hit-mark-cross::after {
+      content: '';
+      position: absolute;
+      background: #d32f2f;
+      border-radius: 2px;
+    }
+    .hit-mark-cross::before {
+      width: 4px; height: 100%;
+      left: 50%; transform: translateX(-50%);
+    }
+    .hit-mark-cross::after {
+      height: 4px; width: 100%;
+      top: 50%; transform: translateY(-50%);
     }
 
     /* 打击特效文字 */
@@ -520,38 +551,8 @@
     <div class="doll-wrapper" id="doll-wrapper">
       <!-- 自定义脸部图片 — 覆盖 SVG 头部圆形区域 -->
       <img class="doll-face-img" id="face-img" alt="自定义脸">
-      <svg class="doll-default" id="doll-svg" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
-        <!-- 默认头部（更明显，带边框） -->
-        <circle id="head-bg" cx="100" cy="100" r="45" fill="#ffb74d" stroke="#e65100" stroke-width="2"/>
-
-        <!-- 眼睛 -->
-        <g id="head-features">
-          <circle cx="82" cy="90" r="6" fill="#333"/>
-          <circle cx="118" cy="90" r="6" fill="#333"/>
-          <!-- 嘴巴（委屈状） -->
-          <path d="M88 120 Q100 108 112 120" stroke="#333" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <!-- 腮红 -->
-          <circle cx="72" cy="105" r="8" fill="#ff7043" opacity="0.5"/>
-          <circle cx="128" cy="105" r="8" fill="#ff7043" opacity="0.5"/>
-        </g>
-
-        <!-- 身体 -->
-        <rect x="70" y="140" width="60" height="70" rx="20" fill="#ef9a9a"/>
-        <!-- 手 -->
-        <circle cx="45" cy="165" r="16" fill="#ffccbc"/>
-        <circle cx="155" cy="165" r="16" fill="#ffccbc"/>
-        <!-- 脚 -->
-        <rect x="75" y="205" width="20" height="40" rx="10" fill="#ef9a9a"/>
-        <rect x="105" y="205" width="20" height="40" rx="10" fill="#ef9a9a"/>
-
-        <!-- 被打的特效十字 -->
-        <g id="hit-mark" opacity="0">
-          <line x1="70" y1="75" x2="90" y2="95" stroke="#d32f2f" stroke-width="4" stroke-linecap="round"/>
-          <line x1="90" y1="75" x2="70" y2="95" stroke="#d32f2f" stroke-width="4" stroke-linecap="round"/>
-          <line x1="110" y1="75" x2="130" y2="95" stroke="#d32f2f" stroke-width="4" stroke-linecap="round"/>
-          <line x1="130" y1="75" x2="110" y2="95" stroke="#d32f2f" stroke-width="4" stroke-linecap="round"/>
-        </g>
-      </svg>
+      <img src="doll.png" class="doll-default" id="doll-svg" alt="小人">
+      <div class="hit-mark-cross" id="hit-mark"></div>
     </div>
   </div>
 
@@ -815,14 +816,14 @@
 
     // ============ 惨叫声合成 ============
     const SCREAM_VARIANTS = [
-      // "啊~" 高音到低音
-      () => { return { start: 900, end: 250, dur: 0.22, wave: 'triangle', vol: 0.35 }; },
-      // "嗷~" 中音
-      () => { return { start: 700, end: 180, dur: 0.18, wave: 'sawtooth', vol: 0.3 }; },
-      // "哎哟~" 有颤音
-      () => { return { start: 600, end: 200, dur: 0.25, wave: 'triangle', vol: 0.4, vibrato: true }; },
-      // "呜~" 低沉
-      () => { return { start: 500, end: 120, dur: 0.2, wave: 'sawtooth', vol: 0.35 }; },
+      // 低沉惨叫 "啊——！"
+      () => { return { start: 350, end: 120, dur: 0.35, wave: 'sawtooth', vol: 0.5, harsh: true }; },
+      // 破音尖叫 "嗷——！"
+      () => { return { start: 600, end: 100, dur: 0.28, wave: 'square', vol: 0.45, vibrato: true, harsh: true }; },
+      // 痛苦呻吟 "呜呃——"
+      () => { return { start: 250, end: 80, dur: 0.4, wave: 'sawtooth', vol: 0.5, vibrato: true }; },
+      // 短促惨叫 "啊！" + 下滑
+      () => { return { start: 500, end: 90, dur: 0.2, wave: 'sawtooth', vol: 0.55, harsh: true }; },
     ];
 
     function playScream() {
@@ -831,59 +832,97 @@
       const now = ctx.currentTime;
       const variant = SCREAM_VARIANTS[Math.floor(Math.random() * SCREAM_VARIANTS.length)]();
 
-      // 主体声音 — 频率下降模拟"啊~"
+      // === 主声部：惨叫声 ===
       const osc = ctx.createOscillator();
       osc.type = variant.wave;
       osc.frequency.setValueAtTime(variant.start, now);
+      // 快速下滑，模拟惨叫
       osc.frequency.exponentialRampToValueAtTime(variant.end, now + variant.dur);
 
       const gain = ctx.createGain();
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(variant.vol, now + 0.03);
+      gain.gain.linearRampToValueAtTime(variant.vol, now + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.001, now + variant.dur);
 
-      // 人声滤波
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(variant.start * 0.8, now);
-      filter.frequency.exponentialRampToValueAtTime(variant.end * 0.8, now + variant.dur);
-      filter.Q.value = 1.5;
+      // 人声共鸣滤波：突出中低频（声带基频+共鸣）
+      const formantFilter = ctx.createBiquadFilter();
+      formantFilter.type = 'bandpass';
+      formantFilter.frequency.value = variant.start * 0.7;
+      formantFilter.Q.value = 2;
 
-      osc.connect(filter).connect(gain).connect(ctx.destination);
+      // 失真效果：让声音更"破"
+      let dest = gain;
+      if (variant.harsh) {
+        const waveShaper = ctx.createWaveShaper();
+        // 轻微失真曲线
+        const curve = new Float32Array(256);
+        for (let i = 0; i < 256; i++) {
+          const x = (i / 128) - 1;
+          curve[i] = Math.tanh(x * 2.5);  // 软削波
+        }
+        waveShaper.curve = curve;
+        gain.connect(waveShaper);
+        dest = waveShaper;
+      }
+
+      dest.connect(formantFilter).connect(ctx.destination);
+      osc.connect(gain);
       osc.start(now);
       osc.stop(now + variant.dur + 0.05);
 
-      // 颤音效果（部分变体）
+      // === 颤音（部分变体）===
       if (variant.vibrato) {
         const lfo = ctx.createOscillator();
         lfo.type = 'sine';
-        lfo.frequency.value = 12;
+        lfo.frequency.value = 18;  // 更快的颤音，更像痛苦挣扎
         const lfoGain = ctx.createGain();
-        lfoGain.gain.value = 30;
+        lfoGain.gain.value = 40;
         lfo.connect(lfoGain);
         lfoGain.connect(osc.frequency);
         lfo.start(now);
         lfo.stop(now + variant.dur);
       }
 
-      // 嘶嘶噪声层
+      // === 嘶嘶气声层（模拟呼吸/声带摩擦）===
       const nSize = ctx.sampleRate * variant.dur;
       const nBuffer = ctx.createBuffer(1, nSize, ctx.sampleRate);
       const nData = nBuffer.getChannelData(0);
       for (let i = 0; i < nSize; i++) {
-        nData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nSize, 3) * 0.3;
+        // 更多高频噪声，模拟"破音"感
+        nData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nSize, 2.5) * 0.5;
       }
       const nSrc = ctx.createBufferSource();
       nSrc.buffer = nBuffer;
       const nGain = ctx.createGain();
-      nGain.gain.setValueAtTime(0.15, now);
+      nGain.gain.setValueAtTime(0.2, now);
       nGain.gain.exponentialRampToValueAtTime(0.001, now + variant.dur);
       const nFilter = ctx.createBiquadFilter();
-      nFilter.type = 'highpass';
-      nFilter.frequency.value = 3000;
+      nFilter.type = 'bandpass';
+      nFilter.frequency.value = 4000;
+      nFilter.Q.value = 3;
       nSrc.connect(nFilter).connect(nGain).connect(ctx.destination);
       nSrc.start(now);
       nSrc.stop(now + variant.dur);
+
+      // === 偶尔加一个"二次惨叫"（延迟的短促"啊！"）===
+      if (Math.random() < 0.4) {
+        const t2 = now + variant.dur * 0.6;
+        const osc2 = ctx.createOscillator();
+        osc2.type = 'sawtooth';
+        osc2.frequency.setValueAtTime(700, t2);
+        osc2.frequency.exponentialRampToValueAtTime(130, t2 + 0.12);
+        const g2 = ctx.createGain();
+        g2.gain.setValueAtTime(0, t2);
+        g2.gain.linearRampToValueAtTime(0.3, t2 + 0.015);
+        g2.gain.exponentialRampToValueAtTime(0.001, t2 + 0.12);
+        const f2 = ctx.createBiquadFilter();
+        f2.type = 'bandpass';
+        f2.frequency.value = 300;
+        f2.Q.value = 2;
+        osc2.connect(f2).connect(g2).connect(ctx.destination);
+        osc2.start(t2);
+        osc2.stop(t2 + 0.15);
+      }
     }
 
     // ============ 状态 ============
@@ -903,10 +942,6 @@
     const fileInput = document.getElementById('file-input');
     const comboEl = document.getElementById('combo');
     const hitMark = document.getElementById('hit-mark');
-
-    // 换脸相关
-    const headBg = document.getElementById('head-bg');
-    const headFeatures = document.getElementById('head-features');
     const faceImg = document.getElementById('face-img');
 
     countEl.textContent = count;
@@ -918,16 +953,12 @@
     })();
 
     function applyFaceImage(dataUrl) {
-      headBg.setAttribute('opacity', '0');
-      headFeatures.style.display = 'none';
       faceImg.src = dataUrl;
       faceImg.classList.add('show');
       faceBtn.textContent = '🎭 换脸 ✓';
     }
 
     function resetFace() {
-      headBg.setAttribute('opacity', '1');
-      headFeatures.style.display = 'block';
       faceImg.classList.remove('show');
       faceImg.src = '';
       localStorage.removeItem('hit-doll-face');
@@ -1068,8 +1099,8 @@
       dollWrapper.classList.add(isCrit ? 'hit-hard' : 'hit');
 
       if (hitMark) {
-        hitMark.setAttribute('opacity', '1');
-        setTimeout(() => hitMark.setAttribute('opacity', '0'), 300);
+        hitMark.classList.add('show');
+        setTimeout(() => hitMark.classList.remove('show'), 300);
       }
 
       const texts = isCrit ? weapon.critTexts : weapon.hitTexts;
