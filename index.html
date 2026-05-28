@@ -222,6 +222,18 @@
       z-index: 10;
     }
 
+    /* 隐私提示 */
+    .privacy-notice {
+      position: fixed;
+      bottom: 88px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: rgba(0,0,0,0.3);
+      white-space: nowrap;
+      z-index: 9;
+    }
+
     /* ===== 左侧武器选择栏 ===== */
     .weapon-bar {
       position: fixed;
@@ -694,6 +706,9 @@
     <button class="hit-btn" id="hit-btn">🎲 打！</button>
   </div>
 
+  <!-- 隐私提示 -->
+  <div class="privacy-notice">🔒 不上传任何个人信息，请放心发泄</div>
+
   <!-- ===================== 裁剪弹窗 ===================== -->
   <div class="crop-overlay" id="crop-overlay">
     <div class="crop-modal">
@@ -1153,7 +1168,7 @@
       const utt = new SpeechSynthesisUtterance(text);
       utt.lang = 'zh-CN';
       utt.rate = 1.1;
-      utt.pitch = 1.2;
+      utt.pitch = 0.85; // 压低音调模拟男声（设备无男声语音时）
       utt.volume = 1.0;
       // 优先选中文男声
       // macOS语音名称可能是中文（婷婷/善怡）或英文（Ting-Ting/Sin-ji），需覆盖两种
