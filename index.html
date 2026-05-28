@@ -224,14 +224,9 @@
 
     /* 隐私提示 */
     .privacy-notice {
-      position: fixed;
-      bottom: 88px;
-      left: 50%;
-      transform: translateX(-50%);
       font-size: 11px;
-      color: rgba(0,0,0,0.3);
+      color: rgba(255,255,255,0.45);
       white-space: nowrap;
-      z-index: 9;
     }
 
     /* ===== 左侧武器选择栏 ===== */
@@ -704,10 +699,8 @@
   <div class="bottom-bar">
     <button class="auto-toggle" id="auto-toggle">🔁 自动暴打: 关</button>
     <button class="hit-btn" id="hit-btn">🎲 打！</button>
+    <div class="privacy-notice">🔒 不上传任何个人信息，请放心发泄</div>
   </div>
-
-  <!-- 隐私提示 -->
-  <div class="privacy-notice">🔒 不上传任何个人信息，请放心发泄</div>
 
   <!-- ===================== 裁剪弹窗 ===================== -->
   <div class="crop-overlay" id="crop-overlay">
