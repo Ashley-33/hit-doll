@@ -808,28 +808,54 @@
       { id: 'shoe',    icon: '👟', label: '扔鞋',   hitTexts: ['啪叽！','鞋击！','飞鞋！','💢','👟'], critTexts: ['鞋袭暴击！','致命鞋击！','👞💥'] },
       { id: 'egg',     icon: '🥚', label: '鸡蛋',   hitTexts: ['咔嚓！','蛋碎！','黄了！','🥚','💛'], critTexts: ['蛋碎无敌！','满屏蛋黄！','🥚💥'] },
       { id: 'veggie',  icon: '🥬', label: '蔬菜',   hitTexts: ['啪！','菜袭！','绿色食品！','🥬','🍅'], critTexts: ['蔬菜暴击！','营养到位！','🥦💥'] },
-      { id: 'club',    icon: '🪓', label: '狼牙棒', hitTexts: ['轰！','重击！','狼牙！','🪓','💢'], critTexts: ['毁灭打击！','狼牙暴击！','⚔️💥'] },
+      { id: 'club',    icon: '🪓', label: '武器',   hitTexts: ['轰！','重击！','一击！','🪓','💢'], critTexts: ['毁灭打击！','武器暴击！','⚔️💥'] },
+      { id: 'knife',   icon: '🔪', label: '小刀',   hitTexts: ['嗖！','刺！','利刃！','🔪','💫'], critTexts: ['一刀毙命！','利刃暴击！','🔪💥'] },
+      { id: 'poop',    icon: '💩', label: '便便',   hitTexts: ['啪嗒！','恶心！','糊脸！','💩','🤢'], critTexts: ['暴击翔弹！','满脸开花！','💩💥'] },
+      { id: 'brick',   icon: '🧱', label: '砖头',   hitTexts: ['砰！','重砸！','砖袭！','🧱','💢'], critTexts: ['天降砖头！','砖头暴击！','🧱💥'] },
+      { id: 'weapon_group', icon: '💩', label: '武器', hitTexts: ['砰！'], critTexts: ['暴击！'] },
     ];
 
     let currentWeapon = 'mixed';
 
+    // ============ 武器子组（四个武器合并为一个按钮） ============
+    const SUB_WEAPON_SET = new Set(['club', 'knife', 'poop', 'brick']);
+
     // ============ 初始化武器栏 ============
     const weaponList = document.getElementById('weapon-list');
+
+    function selectWeapon(weaponId, itemEl) {
+      currentWeapon = weaponId;
+      document.querySelectorAll('.weapon-item').forEach(el => el.classList.remove('active'));
+      if (itemEl) itemEl.classList.add('active');
+      const w = WEAPONS.find(w => w.id === weaponId) || WEAPONS[0];
+      document.getElementById('hit-btn').textContent = `${w.icon} 打！`;
+    }
+
+    // 常规武器按钮（跳过子组中的四个和 weapon_group）
     WEAPONS.forEach(w => {
+      if (SUB_WEAPON_SET.has(w.id)) return;
+      if (w.id === 'weapon_group') return;
       const item = document.createElement('div');
       item.className = 'weapon-item' + (w.id === currentWeapon ? ' active' : '');
       item.dataset.id = w.id;
       item.innerHTML = `<span class="icon">${w.icon}</span><span class="label">${w.label}</span>`;
       item.addEventListener('click', (e) => {
         e.stopPropagation();
-        currentWeapon = w.id;
-        document.querySelectorAll('.weapon-item').forEach(el => el.classList.remove('active'));
-        item.classList.add('active');
-        // 更新打击按钮文字
-        document.getElementById('hit-btn').textContent = `${w.icon} 打！`;
+        selectWeapon(w.id, item);
       });
       weaponList.appendChild(item);
     });
+
+    // 武器合并按钮（放最后，固定💩图标，打的时候随机四选一）
+    const weaponGroupBtn = document.createElement('div');
+    weaponGroupBtn.className = 'weapon-item' + (currentWeapon === 'weapon_group' ? ' active' : '');
+    weaponGroupBtn.id = 'weapon-group';
+    weaponGroupBtn.innerHTML = `<span class="icon">💩</span><span class="label">武器</span>`;
+    weaponGroupBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectWeapon('weapon_group', weaponGroupBtn);
+    });
+    weaponList.appendChild(weaponGroupBtn);
 
     // ============ 音效系统 ============
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -954,6 +980,83 @@
         src.connect(filter).connect(gain).connect(ctx.destination);
         src.start(now);
         src.stop(now + 0.12);
+        return;
+      }
+
+      if (weaponId === 'knife') {
+        // 小刀 — 锋利破空 + 刺入声
+        const bufferSize = ctx.sampleRate * 0.06;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 18);
+        }
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 3000;
+        src.connect(filter).connect(gain).connect(ctx.destination);
+        src.start(now);
+        src.stop(now + 0.08);
+        return;
+      }
+
+      if (weaponId === 'poop') {
+        // 便便 — 湿漉漉的啪叽声
+        const bufferSize = ctx.sampleRate * 0.12;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2) * (0.3 + Math.sin(i * 0.3) * 0.7);
+        }
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 400;
+        src.connect(filter).connect(gain).connect(ctx.destination);
+        src.start(now);
+        src.stop(now + 0.15);
+        return;
+      }
+
+      if (weaponId === 'brick') {
+        // 砖头 — 沉重撞击
+        const osc = ctx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.12);
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 600;
+        osc.connect(filter).connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.18);
+        // 撞击碎片噪声
+        const bufSize2 = ctx.sampleRate * 0.1;
+        const buf2 = ctx.createBuffer(1, bufSize2, ctx.sampleRate);
+        const d2 = buf2.getChannelData(0);
+        for (let i = 0; i < bufSize2; i++) {
+          d2[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize2, 4);
+        }
+        const nsrc = ctx.createBufferSource();
+        nsrc.buffer = buf2;
+        const ngain = ctx.createGain();
+        ngain.gain.setValueAtTime(0.3, now);
+        ngain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        nsrc.connect(ngain).connect(ctx.destination);
+        nsrc.start(now);
+        nsrc.stop(now + 0.14);
         return;
       }
 
@@ -1348,8 +1451,12 @@
     // ============ 获取实际武器（混合模式随机） ============
     function getActiveWeapon() {
       if (currentWeapon === 'mixed') {
-        const realWeapons = WEAPONS.filter(w => w.id !== 'mixed');
+        const realWeapons = WEAPONS.filter(w => w.id !== 'mixed' && w.id !== 'weapon_group');
         return realWeapons[Math.floor(Math.random() * realWeapons.length)];
+      }
+      if (currentWeapon === 'weapon_group') {
+        const subWeapons = WEAPONS.filter(w => ['club','knife','poop','brick'].includes(w.id));
+        return subWeapons[Math.floor(Math.random() * subWeapons.length)];
       }
       return WEAPONS.find(w => w.id === currentWeapon) || WEAPONS[0];
     }
@@ -1381,6 +1488,18 @@
           break;
         case 'egg':
           icon = '🥚';
+          animName = fromLeft ? 'throwFromLeft' : 'throwFromRight';
+          break;
+        case 'knife':
+          icon = '🔪';
+          animName = fromLeft ? 'throwFromLeft' : 'throwFromRight';
+          break;
+        case 'poop':
+          icon = '💩';
+          animName = 'veggieThrow'; // 抛物线效果
+          break;
+        case 'brick':
+          icon = '🧱';
           animName = fromLeft ? 'throwFromLeft' : 'throwFromRight';
           break;
         default:
@@ -1464,7 +1583,7 @@
       triggerPlea();
 
       // 投掷类武器：先播动画，动画中途触发打击
-      const projectileWeapons = ['shoe', 'egg', 'veggie', 'club'];
+      const projectileWeapons = ['shoe', 'egg', 'veggie', 'club', 'knife', 'poop', 'brick'];
       const needAnimation = projectileWeapons.includes(weapon.id);
 
       if (needAnimation) {
