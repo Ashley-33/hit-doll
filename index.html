@@ -1054,11 +1054,34 @@
       });
     }
 
+    // 弹幕节流：连打时每 3 次出 1 条，慢打（间隔>1.2s）每次都出
+    let danmakuHitCount = 0;
+    let lastHitTime = 0;
+    const DANMAKU_SLOW_INTERVAL = 1200; // 超过此时间(ms)视为"慢打"
+    const DANMAKU_THROTTLE = 3;         // 连打时每 N 次触发一条
+
     function triggerPlea() {
-      const text = pleaLines[pleaIndex % pleaLines.length];
-      pleaIndex++;
-      fireDanmaku(text);
-      speakPlea(text);
+      const now = Date.now();
+      const isSlow = (now - lastHitTime) > DANMAKU_SLOW_INTERVAL;
+      lastHitTime = now;
+
+      if (isSlow) {
+        // 慢打：每次都出
+        danmakuHitCount = 0;
+        const text = pleaLines[pleaIndex % pleaLines.length];
+        pleaIndex++;
+        fireDanmaku(text);
+        speakPlea(text);
+      } else {
+        // 连打：每 DANMAKU_THROTTLE 次出一条
+        danmakuHitCount++;
+        if (danmakuHitCount % DANMAKU_THROTTLE === 1) {
+          const text = pleaLines[pleaIndex % pleaLines.length];
+          pleaIndex++;
+          fireDanmaku(text);
+          speakPlea(text);
+        }
+      }
     }
 
     // DOM
