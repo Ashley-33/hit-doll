@@ -19,6 +19,10 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      transition: background 0.6s;
+    }
+    body.ritual-mode {
+      background: linear-gradient(135deg, #4a0000 0%, #7f0000 30%, #5c0000 70%, #3e0000 100%);
     }
 
     /* ===== 弹幕区域 ===== */
@@ -142,12 +146,12 @@
     /* 自定义脸部图片 — 绝对定位覆盖头部 */
     .doll-face-img {
       position: absolute;
-      width: 126px;
-      height: 126px;
+      width: 135px;
+      height: 135px;
       border-radius: 50%;
       object-fit: cover;
-      top: 58px;
-      left: 58px;
+      top: 53px;
+      left: 53px;
       display: none;
       border: 2px solid #e65100;
       z-index: 2;
@@ -170,6 +174,7 @@
       transition: opacity 0.1s;
     }
     .hit-mark-cross.show { opacity: 1; }
+    .hit-mark-cross { display: none; } /* 隐藏红色十字打击标记 */
     .hit-mark-cross::before, .hit-mark-cross::after {
       content: '';
       position: absolute;
@@ -290,6 +295,90 @@
       background: linear-gradient(135deg, #ff7043, #e64a19);
       box-shadow: 0 6px 20px rgba(230,74,25,0.4);
     }
+    body.ritual-mode .hit-btn {
+      background: linear-gradient(135deg, #d4af37, #b8860b);
+      box-shadow: 0 6px 20px rgba(184,134,11,0.5);
+    }
+    body.ritual-mode .hit-btn.auto-on {
+      background: linear-gradient(135deg, #ff8c00, #e65100);
+      box-shadow: 0 6px 20px rgba(230,81,0,0.5);
+    }
+
+    /* ===== 模式切换开关（顶部居中浮动） ===== */
+    .mode-switch {
+      position: fixed;
+      top: 66px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 25px;
+      padding: 4px;
+      gap: 2px;
+      box-shadow: 0 3px 16px rgba(0,0,0,0.13);
+      z-index: 10;
+    }
+    .mode-option {
+      border: none;
+      padding: 8px 16px;
+      border-radius: 22px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s;
+      color: #999;
+      background: transparent;
+      white-space: nowrap;
+    }
+    .mode-option.active {
+      background: linear-gradient(135deg, #e91e63, #c2185b);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(194,24,91,0.35);
+    }
+    body.ritual-mode .mode-switch {
+      background: rgba(0,0,0,0.5);
+    }
+    body.ritual-mode .mode-option {
+      color: #888;
+    }
+    body.ritual-mode .mode-option.active {
+      background: linear-gradient(135deg, #d4af37, #b8860b);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(212,175,55,0.4);
+    }
+    body.ritual-mode .counter {
+      background: rgba(0,0,0,0.4);
+      color: #d4af37;
+    }
+    body.ritual-mode .face-btn {
+      background: rgba(0,0,0,0.4);
+      color: #d4af37;
+    }
+    body.ritual-mode .auto-toggle {
+      background: rgba(0,0,0,0.4);
+      color: #d4af37;
+    }
+    body.ritual-mode .auto-toggle.active {
+      background: rgba(212,175,55,0.2);
+      color: #ffd700;
+    }
+    body.ritual-mode .combo {
+      background: rgba(0,0,0,0.6);
+      color: #d4af37;
+    }
+    body.ritual-mode .weapon-item {
+      background: rgba(0,0,0,0.4);
+      color: #d4af37;
+    }
+    body.ritual-mode .weapon-item.active {
+      border-color: #d4af37;
+      background: rgba(0,0,0,0.6);
+      box-shadow: 0 2px 12px rgba(212,175,55,0.35);
+    }
+    body.ritual-mode .weapon-item .label { color: #bbb; }
+    body.ritual-mode .weapon-item.active .label { color: #d4af37; }
 
     .auto-toggle {
       background: rgba(255,255,255,0.8);
@@ -572,6 +661,12 @@
     <input type="file" id="file-input" accept="image/*">
   </div>
 
+  <!-- 模式切换开关 -->
+  <div class="mode-switch" id="mode-switch">
+    <button class="mode-option active" data-mode="free">🥊 自由散打</button>
+    <button class="mode-option" data-mode="ritual">🕯️ 非遗代打</button>
+  </div>
+
   <!-- 弹幕舞台 -->
   <div class="danmaku-stage" id="danmaku-stage"></div>
 
@@ -676,7 +771,7 @@
         const src = ctx.createBufferSource();
         src.buffer = buffer;
         const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.6, now);
+        gain.gain.setValueAtTime(0.35, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
         const filter = ctx.createBiquadFilter();
         filter.type = 'highpass';
@@ -709,7 +804,7 @@
         const src = ctx.createBufferSource();
         src.buffer = buffer;
         const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.setValueAtTime(0.3, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
         const filter = ctx.createBiquadFilter();
         filter.type = 'bandpass';
@@ -728,7 +823,7 @@
         osc.frequency.setValueAtTime(120, now);
         osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
         const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.6, now);
+        gain.gain.setValueAtTime(0.35, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
         const filter = ctx.createBiquadFilter();
         filter.type = 'lowpass';
@@ -746,7 +841,7 @@
         const nsrc = ctx.createBufferSource();
         nsrc.buffer = buffer;
         const ngain = ctx.createGain();
-        ngain.gain.setValueAtTime(0.5, now);
+        ngain.gain.setValueAtTime(0.3, now);
         ngain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
         nsrc.connect(ngain).connect(ctx.destination);
         nsrc.start(now);
@@ -765,7 +860,7 @@
         const src = ctx.createBufferSource();
         src.buffer = buffer;
         const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.setValueAtTime(0.3, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
         const filter = ctx.createBiquadFilter();
         filter.type = 'bandpass';
@@ -787,7 +882,7 @@
       const noise = ctx.createBufferSource();
       noise.buffer = buffer;
       const noiseGain = ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.5, now);
+      noiseGain.gain.setValueAtTime(0.3, now);
       noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
       const filter = ctx.createBiquadFilter();
       filter.type = 'bandpass';
@@ -802,7 +897,7 @@
       osc.frequency.setValueAtTime(150, now);
       osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
       const oscGain = ctx.createGain();
-      oscGain.gain.setValueAtTime(0.4, now);
+      oscGain.gain.setValueAtTime(0.25, now);
       oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
       osc.connect(oscGain).connect(ctx.destination);
       osc.start(now);
@@ -824,7 +919,7 @@
       const noise = ctx.createBufferSource();
       noise.buffer = buffer;
       const noiseGain = ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.7, now);
+      noiseGain.gain.setValueAtTime(0.4, now);
       noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
@@ -839,7 +934,7 @@
       osc.frequency.setValueAtTime(100, now);
       osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
       const oscGain = ctx.createGain();
-      oscGain.gain.setValueAtTime(0.5, now);
+      oscGain.gain.setValueAtTime(0.3, now);
       oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
       osc.connect(oscGain).connect(ctx.destination);
       osc.start(now);
@@ -963,23 +1058,39 @@
     let autoInterval = null;
     let comboCount = 0;
     let comboTimer = null;
+    let gameMode = 'free'; // 'free' | 'ritual'
 
     // ============ 弹幕求饶系统 ============
     const pleaLines = [
-      "别打了别打了😭", "我错了我错了！", "饶了我吧呜呜",
-      "我再也不敢了！", "痛死了呜呜呜😢", "手下留情啊～",
-      "我认输了认输了！", "你是最棒的最棒的！", "大爷饶命啊～",
+      "别打了别打了！", "我错了我错了！", "饶了我吧呜呜",
+      "我再也不敢了！", "痛死了呜呜呜！", "手下留情啊！",
+      "我认输了认输了！", "啊——！！", "大爷饶命啊！",
       "我的骨头要断了！", "下次绝对改！", "妈呀好疼好疼",
-      "你就当没见过我～", "我给你磕头了🙇", "这辈子记住了！",
+      "你就当没见过我！", "我给你磕头了！", "这辈子记住了！",
       "别打脸别打脸！", "打哪儿都行就别打脸！", "我下辈子不敢了",
       "我保证我发誓！", "呜呜好疼好疼好疼", "你是大侠饶了我！",
-      "我TM不行了😫", "再打我要哭了！", "停手吧我服了！",
-      "老大老大手下留情！", "我把零花钱都给你！", "我以后给你当小弟！",
-      "啊啊啊停停停！", "你心真狠啊呜呜", "对不起！对不起对不起！"
+      "我TM不行了！", "再打我要哭了！", "停手吧我服了！",
+      "老大老大手下留情！", "啊！", "我以后给你当小弟！",
+      "啊啊啊停停停！", "你心真狠啊呜呜", "对不起！对不起对不起！",
+      "啊啊啊啊————！！", "啊…啊……", "啊！！！"
+    ];
+
+    // ============ 非遗代打咒语 ============
+    const ritualLines = [
+      "打你小人头，让你一生难出头！",
+      "打你小人手，让你落魄四处走！",
+      "打你小人脚，让你行路总蹉跎！",
+      "打你小人眼，让你事事常碰壁！",
+      "打你小人口，让你有气难开口！",
+      "打你小人舌，让你出言便惹祸！",
+      "打你小人头，让你烦闷无尽头！",
+      "打你小人手，让你财来也难留！",
+      "打你小人腹，让你吃喝都犯愁！",
+      "打你小人身，让你灾祸绕周身！"
     ];
     let pleaIndex = 0; // 顺序循环
 
-    // 弹幕颜色池
+    // 弹幕颜色池 — 自由散打
     const danmakuColors = [
       'linear-gradient(135deg,#e91e63,#c2185b)',
       'linear-gradient(135deg,#7c4dff,#512da8)',
@@ -987,6 +1098,16 @@
       'linear-gradient(135deg,#00897b,#00695c)',
       'linear-gradient(135deg,#1976d2,#0d47a1)',
       'linear-gradient(135deg,#d81b60,#880e4f)',
+    ];
+
+    // 弹幕颜色池 — 非遗代打
+    const ritualColors = [
+      'linear-gradient(135deg,#d4af37,#8b6914)',
+      'linear-gradient(135deg,#b8860b,#6b3a0a)',
+      'linear-gradient(135deg,#c41e3a,#8b0000)',
+      'linear-gradient(135deg,#ffd700,#cc8800)',
+      'linear-gradient(135deg,#a0522d,#5c2d0e)',
+      'linear-gradient(135deg,#ff6347,#c41e3a)',
     ];
 
     const danmakuStage = document.getElementById('danmaku-stage');
@@ -1001,8 +1122,9 @@
       // 随机轨道
       const track = trackTops[Math.floor(Math.random() * TRACKS)];
       el.style.top = track + 'px';
-      // 随机颜色
-      el.style.background = danmakuColors[Math.floor(Math.random() * danmakuColors.length)];
+      // 随机颜色 — 按模式选择色池
+      const colors = gameMode === 'ritual' ? ritualColors : danmakuColors;
+      el.style.background = colors[Math.floor(Math.random() * colors.length)];
       // 随机滚动时长 4~7s
       const dur = (4 + Math.random() * 3).toFixed(1);
       el.style.animationDuration = dur + 's';
@@ -1032,10 +1154,11 @@
       utt.lang = 'zh-CN';
       utt.rate = 1.1;
       utt.pitch = 1.2;
-      utt.volume = 0.85;
-      // 优先选中文女声
+      utt.volume = 1.0;
+      // 优先选中文男声
       const voices = window.speechSynthesis.getVoices();
-      const zhVoice = voices.find(v => v.lang.startsWith('zh') && v.name.includes('Female'))
+      const zhVoice = voices.find(v => v.lang.startsWith('zh') && /Male|男/.test(v.name))
+                   || voices.find(v => v.lang.startsWith('zh') && !/Female|女/.test(v.name))
                    || voices.find(v => v.lang.startsWith('zh'))
                    || null;
       if (zhVoice) utt.voice = zhVoice;
@@ -1065,10 +1188,12 @@
       const isSlow = (now - lastHitTime) > DANMAKU_SLOW_INTERVAL;
       lastHitTime = now;
 
+      const lines = gameMode === 'ritual' ? ritualLines : pleaLines;
+
       if (isSlow) {
         // 慢打：每次都出
         danmakuHitCount = 0;
-        const text = pleaLines[pleaIndex % pleaLines.length];
+        const text = lines[pleaIndex % lines.length];
         pleaIndex++;
         fireDanmaku(text);
         speakPlea(text);
@@ -1076,7 +1201,7 @@
         // 连打：每 DANMAKU_THROTTLE 次出一条
         danmakuHitCount++;
         if (danmakuHitCount % DANMAKU_THROTTLE === 1) {
-          const text = pleaLines[pleaIndex % pleaLines.length];
+          const text = lines[pleaIndex % lines.length];
           pleaIndex++;
           fireDanmaku(text);
           speakPlea(text);
@@ -1090,6 +1215,8 @@
     const dollWrapper = document.getElementById('doll-wrapper');
     const hitBtn = document.getElementById('hit-btn');
     const autoToggle = document.getElementById('auto-toggle');
+    const modeSwitch = document.getElementById('mode-switch');
+    const modeOptions = modeSwitch.querySelectorAll('.mode-option');
     const faceBtn = document.getElementById('face-btn');
     const fileInput = document.getElementById('file-input');
     const comboEl = document.getElementById('combo');
@@ -1129,8 +1256,8 @@
     // ============ 投掷动画系统 ============
     function animateProjectile(weaponId, onImpact) {
       const dollRect = dollWrapper.getBoundingClientRect();
-      const targetX = dollRect.left + dollRect.width / 2;
-      const targetY = dollRect.top + dollRect.height / 3;
+      const targetX = dollRect.left + dollRect.width * 0.45; // 脸部左移
+      const targetY = dollRect.top + dollRect.height * 0.46; // 脸部中心偏下
 
       const proj = document.createElement('div');
       proj.className = 'projectile';
@@ -1287,7 +1414,9 @@
       el.textContent = text;
       const rect = dollWrapper.getBoundingClientRect();
       el.style.left = (rect.left + rect.width / 2 - 30 + (Math.random() - 0.5) * 80) + 'px';
-      el.style.top = (rect.top + 20 + Math.random() * 40) + 'px';
+      // 脸部中心：换脸圈 top:58 + 63 = 121px，加上随机小范围
+      el.style.left = (rect.left + rect.width / 2 - 50 + (Math.random() - 0.5) * 60) + 'px';
+      el.style.top = (rect.top + 130 + Math.random() * 20) + 'px';
       document.body.appendChild(el);
       setTimeout(() => el.remove(), 750);
     }
@@ -1329,6 +1458,19 @@
         clearInterval(autoInterval);
         autoInterval = null;
       }
+    });
+
+    modeOptions.forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const mode = opt.dataset.mode;
+        if (mode === gameMode) return; // 已选中，不切换
+        gameMode = mode;
+        const isRitual = gameMode === 'ritual';
+        document.body.classList.toggle('ritual-mode', isRitual);
+        modeOptions.forEach(o => o.classList.toggle('active', o.dataset.mode === gameMode));
+        pleaIndex = 0;
+      });
     });
 
     // 长按恢复默认脸
