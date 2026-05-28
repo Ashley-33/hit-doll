@@ -1155,14 +1155,25 @@
       utt.rate = 1.1;
       utt.pitch = 1.2;
       utt.volume = 1.0;
-      // 优先选中文男声（macOS语音名称不含Male/Female，需按具体名称匹配）
-      const maleNames = /sin.?ji|kai|chen|ming|wei|bo|gang|jun|jian/i;
-      const femaleNames = /ting.?ting|mei.?jia|yao.?yao|yue|li.?mu|wen.?wen|yu.?shu/i;
+      // 优先选中文男声
+      // macOS语音名称可能是中文（婷婷/善怡）或英文（Ting-Ting/Sin-ji），需覆盖两种
+      const femalePattern = /ting|婷婷|mei.?jia|美佳|yao|yue|悦|li.?mu|李木|wen|xiao.?yi|晓晓|小艺|小燕|xiao.?xiao|hui|fang|juan|玲|芳|慧|燕/i;
+      const malePattern = /sin.?ji|善怡|kai|chen|ming|wei|bo|gang|jun|jian|qiang|yunyang|yunjian|yunxi|刚|建|明|强|军/i;
       const voices = window.speechSynthesis.getVoices();
-      const zhVoice = voices.find(v => v.lang.startsWith('zh') && maleNames.test(v.name))
-                   || voices.find(v => v.lang.startsWith('zh') && !femaleNames.test(v.name))
-                   || voices.find(v => v.lang.startsWith('zh'))
+      // 调试：打印所有中文语音（开发时可查看控制台）
+      const zhVoices = voices.filter(v => v.lang.startsWith('zh'));
+      if (zhVoices.length > 0) {
+        console.log('🎤 可用中文语音:', zhVoices.map(v => `${v.name} (${v.lang})`).join(', '));
+      } else {
+        console.warn('⚠️ getVoices() 返回空数组，语音可能未加载');
+      }
+      // 匹配逻辑：男声 > 非女声的中文 > zh-CN优先 > 兜底
+      const zhVoice = zhVoices.find(v => malePattern.test(v.name))
+                   || zhVoices.find(v => !femalePattern.test(v.name) && v.lang === 'zh-CN')
+                   || zhVoices.find(v => !femalePattern.test(v.name))
+                   || zhVoices[0]
                    || null;
+      console.log('🗣️ 选中语音:', zhVoice ? `${zhVoice.name} (${zhVoice.lang})` : '无（使用浏览器默认）');
       if (zhVoice) utt.voice = zhVoice;
       utt.onend = utt.onerror = () => {
         ttsSpeaking = false;
