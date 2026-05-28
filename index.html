@@ -1155,10 +1155,12 @@
       utt.rate = 1.1;
       utt.pitch = 1.2;
       utt.volume = 1.0;
-      // 优先选中文男声
+      // 优先选中文男声（macOS语音名称不含Male/Female，需按具体名称匹配）
+      const maleNames = /sin.?ji|kai|chen|ming|wei|bo|gang|jun|jian/i;
+      const femaleNames = /ting.?ting|mei.?jia|yao.?yao|yue|li.?mu|wen.?wen|yu.?shu/i;
       const voices = window.speechSynthesis.getVoices();
-      const zhVoice = voices.find(v => v.lang.startsWith('zh') && /Male|男/.test(v.name))
-                   || voices.find(v => v.lang.startsWith('zh') && !/Female|女/.test(v.name))
+      const zhVoice = voices.find(v => v.lang.startsWith('zh') && maleNames.test(v.name))
+                   || voices.find(v => v.lang.startsWith('zh') && !femaleNames.test(v.name))
                    || voices.find(v => v.lang.startsWith('zh'))
                    || null;
       if (zhVoice) utt.voice = zhVoice;
