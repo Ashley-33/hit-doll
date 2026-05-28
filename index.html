@@ -21,6 +21,35 @@
       justify-content: center;
     }
 
+    /* ===== 弹幕区域 ===== */
+    .danmaku-stage {
+      position: fixed;
+      top: 58px; left: 0; right: 0;
+      height: 90px;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 9;
+    }
+    .danmaku-item {
+      position: absolute;
+      white-space: nowrap;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 5px 14px;
+      border-radius: 20px;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+      opacity: 0;
+      right: -400px;
+      animation: danmaku-fly linear forwards;
+    }
+    @keyframes danmaku-fly {
+      0%   { right: -400px; opacity: 0; }
+      5%   { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { right: 110%; opacity: 0; }
+    }
+
     /* 顶部栏 */
     .top-bar {
       position: fixed;
@@ -543,6 +572,9 @@
     <input type="file" id="file-input" accept="image/*">
   </div>
 
+  <!-- 弹幕舞台 -->
+  <div class="danmaku-stage" id="danmaku-stage"></div>
+
   <!-- 连击提示 -->
   <div class="combo" id="combo"></div>
 
@@ -932,6 +964,103 @@
     let comboCount = 0;
     let comboTimer = null;
 
+    // ============ 弹幕求饶系统 ============
+    const pleaLines = [
+      "别打了别打了😭", "我错了我错了！", "饶了我吧呜呜",
+      "我再也不敢了！", "痛死了呜呜呜😢", "手下留情啊～",
+      "我认输了认输了！", "你是最棒的最棒的！", "大爷饶命啊～",
+      "我的骨头要断了！", "下次绝对改！", "妈呀好疼好疼",
+      "你就当没见过我～", "我给你磕头了🙇", "这辈子记住了！",
+      "别打脸别打脸！", "打哪儿都行就别打脸！", "我下辈子不敢了",
+      "我保证我发誓！", "呜呜好疼好疼好疼", "你是大侠饶了我！",
+      "我TM不行了😫", "再打我要哭了！", "停手吧我服了！",
+      "老大老大手下留情！", "我把零花钱都给你！", "我以后给你当小弟！",
+      "啊啊啊停停停！", "你心真狠啊呜呜", "对不起！对不起对不起！"
+    ];
+    let pleaIndex = 0; // 顺序循环
+
+    // 弹幕颜色池
+    const danmakuColors = [
+      'linear-gradient(135deg,#e91e63,#c2185b)',
+      'linear-gradient(135deg,#7c4dff,#512da8)',
+      'linear-gradient(135deg,#ff6f00,#e65100)',
+      'linear-gradient(135deg,#00897b,#00695c)',
+      'linear-gradient(135deg,#1976d2,#0d47a1)',
+      'linear-gradient(135deg,#d81b60,#880e4f)',
+    ];
+
+    const danmakuStage = document.getElementById('danmaku-stage');
+    const TRACKS = 3; // 3条轨道
+    const TRACK_H = 30; // 每条轨道高度px
+    const trackTops = [2, 32, 62]; // 三条轨道的 top 值
+
+    function fireDanmaku(text) {
+      const el = document.createElement('div');
+      el.className = 'danmaku-item';
+      el.textContent = text;
+      // 随机轨道
+      const track = trackTops[Math.floor(Math.random() * TRACKS)];
+      el.style.top = track + 'px';
+      // 随机颜色
+      el.style.background = danmakuColors[Math.floor(Math.random() * danmakuColors.length)];
+      // 随机滚动时长 4~7s
+      const dur = (4 + Math.random() * 3).toFixed(1);
+      el.style.animationDuration = dur + 's';
+      danmakuStage.appendChild(el);
+      // 动画结束后移除
+      el.addEventListener('animationend', () => el.remove());
+    }
+
+    // TTS 语音求饶（中文，手机/桌面均支持）
+    let ttsEnabled = true;
+    let ttsQueue = [];
+    let ttsSpeaking = false;
+
+    function speakPlea(text) {
+      if (!ttsEnabled || !window.speechSynthesis) return;
+      // 限流：队列最多 2 条，避免堆积
+      if (ttsQueue.length >= 2) return;
+      ttsQueue.push(text);
+      processTTSQueue();
+    }
+
+    function processTTSQueue() {
+      if (ttsSpeaking || ttsQueue.length === 0) return;
+      ttsSpeaking = true;
+      const text = ttsQueue.shift();
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = 'zh-CN';
+      utt.rate = 1.1;
+      utt.pitch = 1.2;
+      utt.volume = 0.85;
+      // 优先选中文女声
+      const voices = window.speechSynthesis.getVoices();
+      const zhVoice = voices.find(v => v.lang.startsWith('zh') && v.name.includes('Female'))
+                   || voices.find(v => v.lang.startsWith('zh'))
+                   || null;
+      if (zhVoice) utt.voice = zhVoice;
+      utt.onend = utt.onerror = () => {
+        ttsSpeaking = false;
+        processTTSQueue();
+      };
+      window.speechSynthesis.speak(utt);
+    }
+
+    // 预加载voices
+    if (window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.addEventListener('voiceschanged', () => {
+        window.speechSynthesis.getVoices();
+      });
+    }
+
+    function triggerPlea() {
+      const text = pleaLines[pleaIndex % pleaLines.length];
+      pleaIndex++;
+      fireDanmaku(text);
+      speakPlea(text);
+    }
+
     // DOM
     const countEl = document.getElementById('count');
     const dollArea = document.getElementById('doll-area');
@@ -1079,6 +1208,9 @@
       const weapon = getActiveWeapon();
 
       if (isCrit) playCritSound(weapon.id); else playHitSound(weapon.id);
+
+      // 每次打击触发一句求饶弹幕
+      triggerPlea();
 
       // 投掷类武器：先播动画，动画中途触发打击
       const projectileWeapons = ['shoe', 'egg', 'veggie', 'club'];
