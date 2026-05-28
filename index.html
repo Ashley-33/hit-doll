@@ -94,6 +94,16 @@
       white-space: nowrap;
     }
     .face-btn:active { transform: scale(0.93); background: rgba(255,255,255,0.95); }
+
+    .face-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .face-restore {
+      color: #e91e63;
+      background: rgba(255,255,255,0.9);
+    }
     #file-input { display: none; }
 
     /* 小人区域 */
@@ -362,6 +372,10 @@
     body.ritual-mode .face-btn {
       background: rgba(0,0,0,0.4);
       color: #d4af37;
+    }
+    body.ritual-mode .face-restore {
+      background: rgba(0,0,0,0.4);
+      color: #ff6b6b;
     }
     body.ritual-mode .auto-toggle {
       background: rgba(0,0,0,0.4);
@@ -674,7 +688,10 @@
   <!-- 顶部栏 -->
   <div class="top-bar">
     <div class="counter">已打 <span id="count">0</span> 下</div>
-    <button class="face-btn" id="face-btn">🎭 换脸</button>
+    <div class="face-group" id="face-group">
+      <button class="face-btn" id="face-btn">📷 换脸</button>
+      <button class="face-btn face-restore" id="face-restore" style="display:none">↩️ 恢复</button>
+    </div>
     <input type="file" id="file-input" accept="image/*">
   </div>
 
@@ -1250,9 +1267,10 @@
     const modeOptions = modeSwitch.querySelectorAll('.mode-option');
     const faceBtn = document.getElementById('face-btn');
     const fileInput = document.getElementById('file-input');
+    const faceImg = document.getElementById('face-img');
+    const faceRestore = document.getElementById('face-restore');
     const comboEl = document.getElementById('combo');
     const hitMark = document.getElementById('hit-mark');
-    const faceImg = document.getElementById('face-img');
 
     countEl.textContent = count;
 
@@ -1265,14 +1283,16 @@
     function applyFaceImage(dataUrl) {
       faceImg.src = dataUrl;
       faceImg.classList.add('show');
-      faceBtn.textContent = '🎭 换脸 ✓';
+      faceBtn.textContent = '📷 换新脸';
+      faceRestore.style.display = '';
     }
 
     function resetFace() {
       faceImg.classList.remove('show');
       faceImg.src = '';
       localStorage.removeItem('hit-doll-face');
-      faceBtn.textContent = '🎭 换脸';
+      faceBtn.textContent = '📷 换脸';
+      faceRestore.style.display = 'none';
     }
 
     // ============ 获取实际武器（混合模式随机） ============
@@ -1504,17 +1524,11 @@
       });
     });
 
-    // 长按恢复默认脸
-    let longPressTimer = null;
-    faceBtn.addEventListener('touchstart', () => {
-      longPressTimer = setTimeout(() => { resetFace(); }, 600);
+    // 恢复原脸按钮
+    faceRestore.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      resetFace();
     });
-    faceBtn.addEventListener('touchend', () => clearTimeout(longPressTimer));
-    faceBtn.addEventListener('mousedown', () => {
-      longPressTimer = setTimeout(() => { resetFace(); }, 600);
-    });
-    faceBtn.addEventListener('mouseup', () => clearTimeout(longPressTimer));
-    faceBtn.addEventListener('mouseleave', () => clearTimeout(longPressTimer));
 
     document.querySelector('.bottom-bar').addEventListener('click', (e) => e.stopPropagation());
 
