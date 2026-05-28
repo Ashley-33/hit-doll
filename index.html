@@ -454,6 +454,56 @@
       100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0); }
     }
 
+    /* 暴击血溅/香灰粒子 */
+    .blood-particle {
+      position: fixed;
+      pointer-events: none;
+      border-radius: 50%;
+      z-index: 30;
+      animation: bloodSplat 0.55s ease-out forwards;
+    }
+    @keyframes bloodSplat {
+      0%   { opacity: 1; transform: translate(0,0) scale(1); }
+      60%  { opacity: 0.7; }
+      100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0.2); }
+    }
+    .ash-particle {
+      position: fixed;
+      pointer-events: none;
+      border-radius: 50%;
+      z-index: 30;
+      animation: ashFloat 0.7s ease-out forwards;
+    }
+    @keyframes ashFloat {
+      0%   { opacity: 0.9; transform: translate(0,0) scale(1); }
+      100% { opacity: 0; transform: translate(var(--px), calc(var(--py) - 30px)) scale(0.1); }
+    }
+
+    /* 血迹残留（小人身上） */
+    .blood-stain {
+      position: absolute;
+      pointer-events: none;
+      border-radius: 50%;
+      z-index: 3;
+      background: radial-gradient(ellipse, rgba(183,28,28,0.55) 0%, rgba(183,28,28,0.15) 60%, transparent 100%);
+      animation: stainFade 3s ease-out forwards;
+    }
+    @keyframes stainFade {
+      0%   { opacity: 1; transform: scale(0.3); }
+      15%  { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.05); }
+    }
+
+    /* 灰烬印记（非遗模式） */
+    .ash-stain {
+      position: absolute;
+      pointer-events: none;
+      border-radius: 50%;
+      z-index: 3;
+      background: radial-gradient(ellipse, rgba(80,60,40,0.5) 0%, rgba(80,60,40,0.1) 60%, transparent 100%);
+      animation: stainFade 2.5s ease-out forwards;
+    }
+
     /* ===== 投掷物动画 ===== */
     .projectile {
       position: fixed;
@@ -1438,7 +1488,13 @@
 
       const texts = isCrit ? weapon.critTexts : weapon.hitTexts;
       spawnFloatingText(texts[Math.floor(Math.random() * texts.length)], isCrit);
-      if (isCrit) spawnParticles();
+      if (isCrit) {
+        if (gameMode === 'ritual') {
+          spawnAshSplatter();
+        } else {
+          spawnBloodSplatter();
+        }
+      }
 
       // 惨叫声 — 暴击必叫，普通打击 35% 概率叫
       const screamChance = isCrit ? 0.85 : 0.35;
@@ -1472,24 +1528,107 @@
       setTimeout(() => el.remove(), 750);
     }
 
-    function spawnParticles() {
+    // 脸部中心在屏幕上的坐标
+    function faceCenter() {
       const rect = dollWrapper.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const colors = ['#e91e63','#ff5722','#ff9800','#ffeb3b','#4caf50','#2196f3'];
-      for (let i = 0; i < 10; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        p.style.background = colors[Math.floor(Math.random() * colors.length)];
-        p.style.left = cx + 'px';
-        p.style.top = cy + 'px';
+      return {
+        x: rect.left + 58 + 67.5,   // left:53 + 135/2
+        y: rect.top + 58 + 67.5
+      };
+    }
+
+    // 暴击血溅粒子
+    function spawnBloodSplatter() {
+      const center = faceCenter();
+      const bloodColors = ['#b71c1c','#c62828','#d32f2f','#e53935','#c62828','#880e0e','#f44336','#ff1744'];
+      const count = 35 + Math.floor(Math.random() * 26); // 35~60滴（加倍）
+      for (let i = 0; i < count; i++) {
+        const droplet = document.createElement('div');
+        droplet.className = 'blood-particle';
+        const sizeW = 6 + Math.random() * 18;
+        // 约1/3的血滴是椭圆形（飞溅拉长效果）
+        const sizeH = Math.random() < 0.35 ? sizeW * (0.3 + Math.random() * 0.4) : sizeW;
+        droplet.style.width = sizeW + 'px';
+        droplet.style.height = sizeH + 'px';
+        droplet.style.background = bloodColors[Math.floor(Math.random() * bloodColors.length)];
+        droplet.style.left = center.x + 'px';
+        droplet.style.top = center.y + 'px';
         const angle = Math.random() * Math.PI * 2;
-        const dist = 60 + Math.random() * 80;
-        p.style.setProperty('--px', Math.cos(angle) * dist + 'px');
-        p.style.setProperty('--py', Math.sin(angle) * dist - 40 + 'px');
-        document.body.appendChild(p);
-        setTimeout(() => p.remove(), 650);
+        const dist = 60 + Math.random() * 160;
+        droplet.style.setProperty('--px', Math.cos(angle) * dist + 'px');
+        droplet.style.setProperty('--py', Math.sin(angle) * dist - 60 + 'px');
+        document.body.appendChild(droplet);
+        setTimeout(() => droplet.remove(), 600);
       }
+      // 多留几道血痕（4~8道）
+      const stains = 4 + Math.floor(Math.random() * 5);
+      for (let s = 0; s < stains; s++) addBloodStain();
+    }
+
+    // 添加血迹残留
+    function addBloodStain() {
+      const stain = document.createElement('div');
+      stain.className = 'blood-stain';
+      const size = 20 + Math.random() * 40;
+      stain.style.width = size + 'px';
+      stain.style.height = (size * (0.5 + Math.random() * 0.6)) + 'px';
+      // 脸部区域随机位置
+      stain.style.left = (45 + Math.random() * 145) + 'px';
+      stain.style.top = (45 + Math.random() * 145) + 'px';
+      stain.style.transform = `rotate(${Math.random() * 360}deg)`;
+      dollWrapper.appendChild(stain);
+      setTimeout(() => stain.remove(), 3100);
+    }
+
+    // 非遗香灰/符纸粒子
+    function spawnAshSplatter() {
+      const center = faceCenter();
+      // 更亮的颜色提高可见度，光泽感更强的符纸
+      const ashColors = ['#6d4c41','#8d6e63','#a1887f','#bcaaa4','#5d4037','#4e342e','#795548','#9e9e9e'];
+      const talismanColors = ['#ffd600','#ffab00','#ffe57f','#ffd740','#ffea00','#ffc400','#ffe082','#fff176'];
+      const count = 55 + Math.floor(Math.random() * 45); // 55~99片（四倍）
+      for (let i = 0; i < count; i++) {
+        const ash = document.createElement('div');
+        ash.className = 'ash-particle';
+        const isTalisman = Math.random() < 0.5; // 50%符纸碎片
+        const size = isTalisman ? 5 + Math.random() * 10 : 5 + Math.random() * 14;
+        ash.style.width = size + 'px';
+        // 符纸碎片做成方形/长方形
+        ash.style.height = isTalisman ? size * (0.3 + Math.random() * 0.7) + 'px' : size + 'px';
+        ash.style.borderRadius = isTalisman ? '2px' : '50%';
+        ash.style.background = isTalisman
+          ? talismanColors[Math.floor(Math.random() * talismanColors.length)]
+          : ashColors[Math.floor(Math.random() * ashColors.length)];
+        // 符纸碎片加一点点光泽
+        if (isTalisman && Math.random() < 0.3) {
+          ash.style.boxShadow = '0 0 4px rgba(255,215,0,0.6)';
+        }
+        ash.style.left = center.x + 'px';
+        ash.style.top = center.y + 'px';
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 60 + Math.random() * 150;
+        ash.style.setProperty('--px', Math.cos(angle) * dist + 'px');
+        ash.style.setProperty('--py', Math.sin(angle) * dist - 50 + 'px');
+        document.body.appendChild(ash);
+        setTimeout(() => ash.remove(), 750);
+      }
+      // 6~11道灰烬印记
+      const stains = 6 + Math.floor(Math.random() * 6);
+      for (let s = 0; s < stains; s++) addAshStain();
+    }
+
+    // 添加灰烬印记
+    function addAshStain() {
+      const stain = document.createElement('div');
+      stain.className = 'ash-stain';
+      const size = 20 + Math.random() * 30;
+      stain.style.width = size + 'px';
+      stain.style.height = (size * 0.6) + 'px';
+      stain.style.left = (48 + Math.random() * 140) + 'px';
+      stain.style.top = (48 + Math.random() * 140) + 'px';
+      stain.style.transform = `rotate(${Math.random() * 360}deg)`;
+      dollWrapper.appendChild(stain);
+      setTimeout(() => stain.remove(), 2600);
     }
 
     // ============ 事件绑定 ============
