@@ -2,7 +2,14 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="打小人">
+  <meta name="theme-color" content="#fce4ec" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#4a0000" media="(prefers-color-scheme: dark)">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <title>打小人 - 情绪释放</title>
   <style>
     * { margin:0; padding:0; box-sizing: border-box; }
@@ -867,6 +874,140 @@
       color: white;
       box-shadow: 0 4px 16px rgba(194,24,91,0.3);
     }
+
+    /* ===== PWA 添加到主屏幕引导 ===== */
+    .pwa-guide-btn {
+      background: rgba(255,255,255,0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(194,24,91,0.2);
+      border-radius: 14px;
+      padding: 5px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #c2185b;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .pwa-guide-btn:active { transform: scale(0.95); background: rgba(194,24,91,0.12); }
+    body.ritual-mode .pwa-guide-btn {
+      background: rgba(0,0,0,0.35);
+      border-color: rgba(212,175,55,0.3);
+      color: #d4af37;
+    }
+    body.ritual-mode .pwa-guide-btn:active { background: rgba(212,175,55,0.15); }
+
+    .pwa-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 200;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: max(40px, env(safe-area-inset-bottom));
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    .pwa-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .pwa-guide-panel {
+      background: #fff;
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      max-width: 420px;
+      padding: 28px 24px 32px;
+      text-align: center;
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .pwa-overlay.show .pwa-guide-panel {
+      transform: translateY(0);
+    }
+    .pwa-guide-panel .guide-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    .pwa-guide-panel .guide-title {
+      font-size: 19px;
+      font-weight: 800;
+      color: #c2185b;
+      margin-bottom: 20px;
+    }
+    .pwa-guide-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .pwa-guide-step {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-align: left;
+      padding: 12px 16px;
+      background: rgba(233,30,99,0.04);
+      border-radius: 14px;
+    }
+    .pwa-guide-step .step-num {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e91e63, #c2185b);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pwa-guide-step .step-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      line-height: 1.4;
+    }
+    .pwa-guide-step .step-text small {
+      display: block;
+      font-weight: 400;
+      font-size: 12px;
+      color: #999;
+      margin-top: 2px;
+    }
+    .pwa-guide-arrow {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .pwa-guide-arrow svg {
+      animation: arrowBounce 1s ease-in-out infinite;
+    }
+    @keyframes arrowBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .pwa-guide-close {
+      width: 100%;
+      max-width: 320px;
+      height: 48px;
+      border: none;
+      border-radius: 24px;
+      font-size: 16px;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(135deg, #e91e63, #c2185b);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .pwa-guide-close:active { transform: scale(0.96); }
   </style>
   <!-- 百度统计 -->
   <script>
@@ -932,7 +1073,34 @@
   <div class="bottom-bar">
     <button class="auto-toggle" id="auto-toggle">🔁 自动暴打: 关</button>
     <button class="hit-btn" id="hit-btn">🎲 打！</button>
+    <button class="pwa-guide-btn" id="pwa-guide-btn">📲 加到主屏幕</button>
     <div class="privacy-notice">🔒 游戏不保存任何个人信息，请放心发泄</div>
+  </div>
+
+  <!-- ===================== PWA 引导弹窗 ===================== -->
+  <div class="pwa-overlay" id="pwa-overlay">
+    <div class="pwa-guide-panel">
+      <div class="guide-icon">📱</div>
+      <div class="guide-title">添加到主屏幕，随时来发泄</div>
+      <div class="pwa-guide-arrow">
+        <svg width="28" height="40" viewBox="0 0 28 40"><path d="M14 38V4" stroke="#e91e63" stroke-width="3" stroke-linecap="round"/><path d="M6 30L14 38L22 30" stroke="#e91e63" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </div>
+      <div class="pwa-guide-steps">
+        <div class="pwa-guide-step">
+          <span class="step-num">①</span>
+          <span class="step-text">点击 Safari 底部 <small>中间的「分享」按钮 ↥</small></span>
+        </div>
+        <div class="pwa-guide-step">
+          <span class="step-num">②</span>
+          <span class="step-text">滑动找到「添加到主屏幕」<small>📲 Add to Home Screen</small></span>
+        </div>
+        <div class="pwa-guide-step">
+          <span class="step-num">③</span>
+          <span class="step-text">点击右上角「添加」，完成！<small>桌面就会出现「打小人」图标</small></span>
+        </div>
+      </div>
+      <button class="pwa-guide-close" id="pwa-guide-close">我知道了</button>
+    </div>
   </div>
 
   <!-- ===================== 裁剪弹窗 ===================== -->
@@ -2307,6 +2475,53 @@
     // 按钮
     cropCancel.addEventListener('click', closeCrop);
     cropConfirm.addEventListener('click', confirmCrop);
+
+    // ===================== PWA 添加到主屏幕引导 =====================
+    const pwaGuideBtn = document.getElementById('pwa-guide-btn');
+    const pwaOverlay = document.getElementById('pwa-overlay');
+    const pwaClose = document.getElementById('pwa-guide-close');
+
+    // 如果已在独立模式（已添加到主屏幕）则隐藏引导按钮
+    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+    if (isStandalone) {
+      pwaGuideBtn.style.display = 'none';
+    }
+
+    // 打开引导弹窗
+    pwaGuideBtn.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      pwaOverlay.classList.add('show');
+    });
+
+    // 关闭引导弹窗
+    function closePwaGuide() {
+      pwaOverlay.classList.remove('show');
+    }
+    pwaClose.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      closePwaGuide();
+    });
+
+    // 点击遮罩层关闭（并阻止穿透）
+    pwaOverlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (e.target === pwaOverlay) closePwaGuide();
+    });
+    pwaOverlay.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+    });
+
+    // 阻止弹窗面板上的点击冒泡
+    document.querySelector('.pwa-guide-panel').addEventListener('click', (e) => e.stopPropagation());
+
+    // 如果是 Android Chrome 等非 Safari 浏览器，调整引导文字
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if (!isSafari) {
+      const steps = document.querySelectorAll('.pwa-guide-step .step-text');
+      if (steps[0]) steps[0].innerHTML = '点击浏览器菜单 <small>⋮ 或右上角「⋯」</small>';
+      if (steps[1]) steps[1].innerHTML = '找到「添加到主屏幕」<small>📲 Add to Home Screen</small>';
+      if (steps[2]) steps[2].innerHTML = '确认添加，完成！<small>桌面就会出现「打小人」图标</small>';
+    }
   </script>
 </body>
 </html>
